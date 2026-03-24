@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Eliza.Gallery</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            background: #111827;
+            color: white;
+            text-align: center;
+        }
+        .wrap {
+            padding: 40px 20px;
+        }
+        img {
+            max-width: 90%;
+            border-radius: 16px;
+        }
+        a.button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 25px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <!--img src="{% static 'eliza_landing_2.png' %}" alt="Eliza"-->
+        <img src="https://storage.yandexcloud.net/gallery-media-public/landing_image.png" alt="Eliza">
+        <!--h1>Eliza.Gallery</h1>
+        <p>Вещи по-королевски от Елизаветы</p-->
+	<br />
+        <a class="button" href="https://t.me/+V1aBQ03yztk5Nzdi"
+		style="font-size: xx-large;">
+            Перейти в Telegram
+        </a>
+	<br /><br />
+	<div style="font-size: xx-large;">
+	Телеграм едва жив, поэтому скоро<br />
+	здесь появится ссылка на приложение для смартфона.<br /><br />
+	В Телеграм переходить не нужно.<br />
+	Разве только чтобы проверить, что группа та самая.<br />
+	Пока она ещё открывается у Вас в Телеграме...
+	</div>
+    </div>
+</body>
+</html>

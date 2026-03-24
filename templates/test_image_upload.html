@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test image upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 16px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .error {
+            background: #ffe8e8;
+            color: #900;
+            border: 1px solid #f0b7b7;
+        }
+        .result {
+            background: #f8f8f8;
+        }
+        img.preview {
+            max-width: 100%;
+            margin-top: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            background: #111;
+            color: white;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #999;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test image upload</h1>
+    <p>Upload a file to Yandex Object Storage and get its public URL.</p>
+
+    <div class="card">
+        <input type="file" id="fileInput">
+        <div style="margin-top: 16px;">
+            <button id="uploadBtn">Upload</button>
+        </div>
+    </div>
+
+    <div id="errorBox" class="card error" style="display:none;"></div>
+    <div id="resultBox" class="card result" style="display:none;"></div>
+
+    <script>
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        const fileInput = document.getElementById("fileInput");
+        const uploadBtn = document.getElementById("uploadBtn");
+        const errorBox = document.getElementById("errorBox");
+        const resultBox = document.getElementById("resultBox");
+
+        uploadBtn.addEventListener("click", async () => {
+            errorBox.style.display = "none";
+            resultBox.style.display = "none";
+            errorBox.innerHTML = "";
+            resultBox.innerHTML = "";
+
+            const file = fileInput.files[0];
+            if (!file) {
+                errorBox.textContent = "Please choose a file first.";
+                errorBox.style.display = "block";
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = "Uploading...";
+
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const response = await fetch("/api/test-image-upload", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-CSRFToken": getCookie("csrftoken"),
+                    },
+                    credentials: "same-origin",
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.details || data.error || "Upload failed");
+                }
+
+                let html = `
+                    <p><b>Name:</b> ${data.name}</p>
+                    <p><b>Size:</b> ${data.size} bytes</p>
+                    <p><b>Content-Type:</b> ${data.content_type}</p>
+                    <p><b>Object key:</b> ${data.object_key}</p>
+                    <p><b>Public URL:</b> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a></p>
+                `;
+
+                if (data.content_type.startsWith("image/")) {
+                    html += `<img class="preview" src="${data.url}" alt="Uploaded image preview">`;
+                }
+
+                resultBox.innerHTML = html;
+                resultBox.style.display = "block";
+            } catch (err) {
+                errorBox.textContent = err.message || "Unknown error";
+                errorBox.style.display = "block";
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = "Upload";
+            }
+        });
+    </script>
+</body>
+</html>
