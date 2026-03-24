@@ -18,37 +18,15 @@ logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("botocore").setLevel(logging.DEBUG)
 logging.getLogger("boto3").setLevel(logging.DEBUG)
 
-"""
+
 def get_s3_client():
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.YA_PUBLIC_UPLOADER_ENDPOINT_URL,
+    session = boto3.session.Session()
+    return session.client(
+        service_name="s3",
+        endpoint_url="https://storage.yandexcloud.net",
         aws_access_key_id=settings.YA_PUBLIC_UPLOADER_ACCESS_KEY_ID,
         aws_secret_access_key=settings.YA_PUBLIC_UPLOADER_SECRET_ACCESS_KEY,
         region_name=settings.YA_PUBLIC_UPLOADER_REGION_NAME,
-        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
-    )
-
-def get_s3_client():
-    session = boto3.session.Session()
-    return session.client(
-        service_name="s3",
-        endpoint_url="https://storage.yandexcloud.net",
-        aws_access_key_id=settings.YA_PUBLIC_UPLOADER_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.YA_PUBLIC_UPLOADER_SECRET_ACCESS_KEY,
-        #region_name="ru-central1",
-        region_name="us-east-1",
-    )
-"""
-
-def get_s3_client():
-    session = boto3.session.Session()
-    return session.client(
-        service_name="s3",
-        endpoint_url="https://storage.yandexcloud.net",
-        aws_access_key_id=settings.YA_PUBLIC_UPLOADER_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.YA_PUBLIC_UPLOADER_SECRET_ACCESS_KEY,
-        region_name="ru-central1",
         config=Config(
             signature_version="s3v4",
             retries={"max_attempts": 2, "mode": "standard"},
@@ -111,4 +89,47 @@ def test_image_upload_api(request):
             "error": "Upload failed",
             "details": repr(e),
             "trace": traceback.format_exc(),
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def test_image_upload_presign_api(request):
+    filename = request.POST.get("filename")
+    content_type = request.POST.get("content_type")
+
+    if not filename:
+        return JsonResponse({"error": "filename is required"}, status=400)
+
+    if not content_type:
+        content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+    try:
+        object_key = build_object_key(filename)
+
+        s3 = get_s3_client()
+        presigned_url = s3.generate_presigned_url(
+            ClientMethod="put_object",
+            Params={
+                "Bucket": settings.YA_PUBLIC_UPLOADER_BUCKET_NAME,
+                "Key": object_key,
+                "ContentType": content_type,
+            },
+            ExpiresIn=3600,
+            HttpMethod="PUT",
+        )
+
+        public_url = f"{settings.YA_PUBLIC_UPLOADER_PUBLIC_BASE_URL.rstrip('/')}/{object_key}"
+
+        return JsonResponse({
+            "ok": True,
+            "upload_url": presigned_url,
+            "public_url": public_url,
+            "object_key": object_key,
+            "content_type": content_type,
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "error": "Presign failed",
+            "details": repr(e),
         }, status=500)

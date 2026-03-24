@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test image upload</title>
+    <title>Test direct image upload</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -46,13 +46,13 @@
     </style>
 </head>
 <body>
-    <h1>Test image upload</h1>
-    <p>Upload a file to Yandex Object Storage and get its public URL.</p>
+    <h1>Test direct image upload</h1>
+    <p>Request a presigned URL from Django, then upload the file directly to Yandex Object Storage.</p>
 
     <div class="card">
         <input type="file" id="fileInput">
         <div style="margin-top: 16px;">
-            <button id="uploadBtn">Upload</button>
+            <button id="uploadBtn">Upload directly to Yandex</button>
         </div>
     </div>
 
@@ -71,16 +71,24 @@
         const errorBox = document.getElementById("errorBox");
         const resultBox = document.getElementById("resultBox");
 
-        uploadBtn.addEventListener("click", async () => {
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.style.display = "block";
+        }
+
+        function hideMessages() {
             errorBox.style.display = "none";
             resultBox.style.display = "none";
             errorBox.innerHTML = "";
             resultBox.innerHTML = "";
+        }
+
+        uploadBtn.addEventListener("click", async () => {
+            hideMessages();
 
             const file = fileInput.files[0];
             if (!file) {
-                errorBox.textContent = "Please choose a file first.";
-                errorBox.style.display = "block";
+                showError("Please choose a file first.");
                 return;
             }
 
@@ -89,9 +97,10 @@
 
             try {
                 const formData = new FormData();
-                formData.append("file", file);
+                formData.append("filename", file.name);
+                formData.append("content_type", file.type || "application/octet-stream");
 
-                const response = await fetch("/api/test-image-upload", {
+                const presignResponse = await fetch("/api/test-image-upload/presign", {
                     method: "POST",
                     body: formData,
                     headers: {
@@ -100,32 +109,44 @@
                     credentials: "same-origin",
                 });
 
-                const data = await response.json();
+                const presignData = await presignResponse.json();
 
-                if (!response.ok) {
-                    throw new Error(data.details || data.error || "Upload failed");
+                if (!presignResponse.ok) {
+                    throw new Error(presignData.details || presignData.error || "Presign failed");
+                }
+
+                const uploadResponse = await fetch(presignData.upload_url, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": presignData.content_type,
+                    },
+                    body: file,
+                });
+
+                if (!uploadResponse.ok) {
+                    const text = await uploadResponse.text();
+                    throw new Error(`Direct upload failed: HTTP ${uploadResponse.status}: ${text.slice(0, 300)}`);
                 }
 
                 let html = `
-                    <p><b>Name:</b> ${data.name}</p>
-                    <p><b>Size:</b> ${data.size} bytes</p>
-                    <p><b>Content-Type:</b> ${data.content_type}</p>
-                    <p><b>Object key:</b> ${data.object_key}</p>
-                    <p><b>Public URL:</b> <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.url}</a></p>
+                    <p><b>Name:</b> ${file.name}</p>
+                    <p><b>Size:</b> ${file.size} bytes</p>
+                    <p><b>Content-Type:</b> ${presignData.content_type}</p>
+                    <p><b>Object key:</b> ${presignData.object_key}</p>
+                    <p><b>Public URL:</b> <a href="${presignData.public_url}" target="_blank" rel="noopener noreferrer">${presignData.public_url}</a></p>
                 `;
 
-                if (data.content_type.startsWith("image/")) {
-                    html += `<img class="preview" src="${data.url}" alt="Uploaded image preview">`;
+                if ((presignData.content_type || "").startsWith("image/")) {
+                    html += `<img class="preview" src="${presignData.public_url}" alt="Uploaded image preview">`;
                 }
 
                 resultBox.innerHTML = html;
                 resultBox.style.display = "block";
             } catch (err) {
-                errorBox.textContent = err.message || "Unknown error";
-                errorBox.style.display = "block";
+                showError(err.message || "Unknown error");
             } finally {
                 uploadBtn.disabled = false;
-                uploadBtn.textContent = "Upload";
+                uploadBtn.textContent = "Upload directly to Yandex";
             }
         });
     </script>
