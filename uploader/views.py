@@ -12,11 +12,12 @@ from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
 import traceback
+from django.contrib.admin.views.decorators import staff_member_required
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger("botocore").setLevel(logging.DEBUG)
-logging.getLogger("boto3").setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("boto3").setLevel(logging.WARNING)
 
 
 def get_s3_client():
@@ -41,6 +42,7 @@ def build_object_key(filename: str) -> str:
     return f"test-uploads/{date_path}/{safe_base}-{unique_id}{ext.lower()}"
 
 
+@staff_member_required
 @require_http_methods(["GET"])
 def test_image_upload_page(request):
     return render(request, "test_image_upload.html")
