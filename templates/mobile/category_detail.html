@@ -8,7 +8,7 @@
 
 {% if products %}
     {% for product in products %}
-    <div class="card">
+    <div class="card{% if product.is_hidden %} card-hidden{% endif %}" id="prod-{{ product.id }}">
         <a href="{% url 'mobile_product_detail' product.id %}">
             {% if product.cover_key %}
             <img class="card-img" src="{{ public_base }}/{{ product.cover_key }}" alt="{{ product.name }}">
@@ -19,6 +19,11 @@
                 <div class="card-title">{{ product.name }}</div>
             </div>
         </a>
+        <div class="card-footer">
+            <button class="toggle-btn" data-url="{% url 'mobile_product_toggle_hidden' product.id %}" data-id="prod-{{ product.id }}" onclick="toggleHidden(this)">
+                {% if product.is_hidden %}Показать{% else %}Скрыть{% endif %}
+            </button>
+        </div>
     </div>
     {% endfor %}
 {% else %}

@@ -28,6 +28,10 @@
         .images-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
         .images-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
         .empty { text-align: center; color: #999; padding: 40px 0; }
+        .card-footer { padding: 8px 12px; border-top: 1px solid #f0f0f0; }
+        .toggle-btn { background: none; border: none; font-size: 13px; color: #999; cursor: pointer; padding: 0; }
+        .toggle-btn:active { color: #333; }
+        .card-hidden { opacity: 0.45; }
     </style>
 </head>
 <body>
@@ -76,6 +80,31 @@ async function uploadImage(input, keyFieldId, previewId, statusId) {
     } catch(e) {
         status.textContent = 'Ошибка: ' + e.message;
         status.style.color = 'red';
+    }
+}
+</script>
+<script>
+async function toggleHidden(btn) {
+    const url = btn.dataset.url;
+    const cardId = btn.dataset.id;
+    try {
+        const r = await fetch(url, {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            credentials: 'same-origin'
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error();
+        const card = document.getElementById(cardId);
+        if (data.is_hidden) {
+            card.classList.add('card-hidden');
+            btn.textContent = 'Показать';
+        } else {
+            card.classList.remove('card-hidden');
+            btn.textContent = 'Скрыть';
+        }
+    } catch(e) {
+        alert('Ошибка');
     }
 }
 </script>

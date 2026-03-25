@@ -43,7 +43,7 @@ def _build_object_key(filename: str, prefix: str = 'catalog') -> str:
 
 @api_view(['GET'])
 def category_list(request):
-    categories = Category.objects.all()
+    categories = Category.objects.filter(is_hidden=False)
     return Response(CategorySerializer(categories, many=True).data)
 
 
@@ -53,7 +53,7 @@ def product_list(request, category_id):
         category = Category.objects.get(pk=category_id)
     except Category.DoesNotExist:
         return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
-    products = category.products.all().order_by('-created_at')
+    products = category.products.filter(is_hidden=False).order_by('-created_at')
     return Response(ProductListSerializer(products, many=True).data)
 
 
@@ -180,3 +180,21 @@ def mobile_product_image_add(request, pk):
         return JsonResponse({'error': 'image_key required'}, status=400)
     ProductImage.objects.create(product=product, image_key=image_key)
     return JsonResponse({'ok': True})
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def mobile_category_toggle_hidden(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    category.is_hidden = not category.is_hidden
+    category.save(update_fields=['is_hidden'])
+    return JsonResponse({'ok': True, 'is_hidden': category.is_hidden})
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def mobile_product_toggle_hidden(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    product.is_hidden = not product.is_hidden
+    product.save(update_fields=['is_hidden'])
+    return JsonResponse({'ok': True, 'is_hidden': product.is_hidden})
