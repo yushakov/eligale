@@ -11,6 +11,12 @@ from django.http import JsonResponse
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import Category, Product
+from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer
 
 
 def _get_s3_client():
@@ -31,6 +37,31 @@ def _build_object_key(filename: str, prefix: str = 'catalog') -> str:
     date_path = datetime.utcnow().strftime('%Y-%m-%d')
     unique_id = uuid.uuid4().hex
     return f'{prefix}/{date_path}/{safe_base}-{unique_id}{ext.lower()}'
+
+
+@api_view(['GET'])
+def category_list(request):
+    categories = Category.objects.all()
+    return Response(CategorySerializer(categories, many=True).data)
+
+
+@api_view(['GET'])
+def product_list(request, category_id):
+    try:
+        category = Category.objects.get(pk=category_id)
+    except Category.DoesNotExist:
+        return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+    products = category.products.all()
+    return Response(ProductListSerializer(products, many=True).data)
+
+
+@api_view(['GET'])
+def product_detail(request, product_id):
+    try:
+        product = Product.objects.prefetch_related('images').get(pk=product_id)
+    except Product.DoesNotExist:
+        return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+    return Response(ProductDetailSerializer(product).data)
 
 
 @staff_member_required

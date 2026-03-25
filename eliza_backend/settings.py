@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'main',
     'uploader',
     'catalog',
+    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
