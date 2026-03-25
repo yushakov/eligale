@@ -4,8 +4,12 @@ set -e
 echo "==> git pull"
 git pull
 
+cd /home
+
 echo "==> pip install"
 source venv/bin/activate
+
+cd eliza_app
 pip install -r requirements.txt
 
 echo "==> migrate"
