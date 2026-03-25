@@ -16,7 +16,7 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
+    categories = models.ManyToManyField(Category, related_name='products', blank=True)
     name = models.CharField(max_length=255)
     cover_key = models.CharField(max_length=1024, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)

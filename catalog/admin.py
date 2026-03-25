@@ -25,13 +25,6 @@ class ProductForm(forms.ModelForm):
         widgets = {'cover_key': ImageUploadWidget}
 
 
-class ProductInline(admin.TabularInline):
-    model = Product
-    extra = 1
-    fields = ['name', 'cover_key']
-    show_change_link = True
-
-
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
@@ -43,18 +36,16 @@ class CategoryForm(forms.ModelForm):
 class CategoryAdmin(admin.ModelAdmin):
     form = CategoryForm
     list_display = ['name', 'created_at']
-    inlines = [ProductInline]
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     form = ProductForm
-    list_display = ['name', 'category', 'created_at']
-    list_filter = ['category']
+    list_display = ['name', 'created_at']
+    filter_horizontal = ['categories']
     inlines = [ProductImageInline]
 
 
 @admin.register(ProductImage)
 class ProductImageAdmin(admin.ModelAdmin):
     list_display = ['product', 'order', 'created_at']
-    list_filter = ['product__category']

@@ -51,7 +51,7 @@ def product_list(request, category_id):
         category = Category.objects.get(pk=category_id)
     except Category.DoesNotExist:
         return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
-    products = category.products.all()
+    products = category.products.all().order_by('-created_at')
     return Response(ProductListSerializer(products, many=True).data)
 
 
