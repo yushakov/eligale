@@ -1,0 +1,26 @@
+{% extends "mobile/base.html" %}
+{% block title %}Категории{% endblock %}
+{% block heading %}Категории{% endblock %}
+
+{% block content %}
+<a href="{% url 'mobile_category_add' %}" class="btn">+ Добавить категорию</a>
+
+{% if categories %}
+    {% for cat in categories %}
+    <div class="card">
+        <a href="{% url 'mobile_category_detail' cat.id %}">
+            {% if cat.cover_key %}
+            <img class="card-img" src="{{ public_base }}/{{ cat.cover_key }}" alt="{{ cat.name }}">
+            {% else %}
+            <div style="height:80px;background:#eee;"></div>
+            {% endif %}
+            <div class="card-body">
+                <div class="card-title">{{ cat.name }}</div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="empty">Нет категорий</div>
+{% endif %}
+{% endblock %}

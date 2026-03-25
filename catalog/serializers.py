@@ -49,7 +49,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'cover_url', 'created_at', 'images']
+        fields = ['id', 'name', 'description', 'cover_url', 'created_at', 'images']
 
     def get_cover_url(self, obj):
         return _public_url(obj.cover_key)

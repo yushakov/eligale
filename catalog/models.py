@@ -18,6 +18,7 @@ class Category(models.Model):
 class Product(models.Model):
     categories = models.ManyToManyField(Category, related_name='products', blank=True)
     name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default='')
     cover_key = models.CharField(max_length=1024, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 

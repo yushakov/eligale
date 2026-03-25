@@ -1,3 +1,4 @@
+import json
 import mimetypes
 import os
 import uuid
@@ -8,6 +9,7 @@ from botocore.client import Config
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
@@ -15,7 +17,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Category, Product
+from .models import Category, Product, ProductImage
 from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer
 
 
@@ -100,3 +102,81 @@ def presign_upload(request):
         'public_url': public_url,
         'content_type': content_type,
     })
+
+
+# ── Mobile views ──────────────────────────────────────────────────────────────
+
+PUBLIC_BASE = settings.YA_PUBLIC_UPLOADER_PUBLIC_BASE_URL.rstrip('/')
+
+
+@staff_member_required
+def mobile_home(request):
+    categories = Category.objects.all().order_by('name')
+    return render(request, 'mobile/home.html', {
+        'categories': categories,
+        'public_base': PUBLIC_BASE,
+    })
+
+
+@staff_member_required
+def mobile_category_add(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        cover_key = request.POST.get('cover_key', '').strip()
+        if name:
+            cat = Category.objects.create(name=name, cover_key=cover_key)
+            return redirect('mobile_category_detail', pk=cat.pk)
+    return render(request, 'mobile/category_add.html')
+
+
+@staff_member_required
+def mobile_category_detail(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    products = category.products.all().order_by('-created_at')
+    return render(request, 'mobile/category_detail.html', {
+        'category': category,
+        'products': products,
+        'public_base': PUBLIC_BASE,
+    })
+
+
+@staff_member_required
+def mobile_product_add(request, category_id):
+    category = get_object_or_404(Category, pk=category_id)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        cover_key = request.POST.get('cover_key', '').strip()
+        if name:
+            product = Product.objects.create(
+                name=name, description=description, cover_key=cover_key
+            )
+            product.categories.add(category)
+            return redirect('mobile_product_detail', pk=product.pk)
+    return render(request, 'mobile/product_add.html', {'category': category})
+
+
+@staff_member_required
+def mobile_product_detail(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    images = product.images.all().order_by('id')
+    return render(request, 'mobile/product_detail.html', {
+        'product': product,
+        'images': images,
+        'public_base': PUBLIC_BASE,
+    })
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def mobile_product_image_add(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    try:
+        data = json.loads(request.body)
+        image_key = data.get('image_key', '').strip()
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    if not image_key:
+        return JsonResponse({'error': 'image_key required'}, status=400)
+    ProductImage.objects.create(product=product, image_key=image_key)
+    return JsonResponse({'ok': True})
