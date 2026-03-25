@@ -160,10 +160,14 @@ def mobile_product_add(request, category_id):
 def mobile_product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
     images = product.images.all().order_by('id')
+    all_categories = Category.objects.all().order_by('name')
+    product_category_ids = set(product.categories.values_list('id', flat=True))
     return render(request, 'mobile/product_detail.html', {
         'product': product,
         'images': images,
         'public_base': PUBLIC_BASE,
+        'all_categories': all_categories,
+        'product_category_ids': product_category_ids,
     })
 
 
@@ -180,6 +184,20 @@ def mobile_product_image_add(request, pk):
         return JsonResponse({'error': 'image_key required'}, status=400)
     ProductImage.objects.create(product=product, image_key=image_key)
     return JsonResponse({'ok': True})
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def mobile_product_toggle_category(request, pk, category_id):
+    product = get_object_or_404(Product, pk=pk)
+    category = get_object_or_404(Category, pk=category_id)
+    if product.categories.filter(pk=category_id).exists():
+        product.categories.remove(category)
+        assigned = False
+    else:
+        product.categories.add(category)
+        assigned = True
+    return JsonResponse({'ok': True, 'assigned': assigned})
 
 
 @staff_member_required

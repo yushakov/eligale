@@ -32,6 +32,9 @@
         .toggle-btn { background: none; border: none; font-size: 13px; color: #999; cursor: pointer; padding: 0; }
         .toggle-btn:active { color: #333; }
         .card-hidden { opacity: 0.45; }
+        .cat-checkbox-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 16px; }
+        .cat-checkbox-row:last-child { border-bottom: none; }
+        .cat-checkbox-row input[type=checkbox] { width: 20px; height: 20px; cursor: pointer; accent-color: #111; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -84,6 +87,21 @@ async function uploadImage(input, keyFieldId, previewId, statusId) {
 }
 </script>
 <script>
+async function toggleCategory(checkbox, productId, categoryId) {
+    try {
+        const r = await fetch(`/mobile/products/${productId}/toggle-category/${categoryId}/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            credentials: 'same-origin'
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error();
+        checkbox.checked = data.assigned;
+    } catch(e) {
+        checkbox.checked = !checkbox.checked;
+        alert('Ошибка');
+    }
+}
 async function toggleHidden(btn) {
     const url = btn.dataset.url;
     const cardId = btn.dataset.id;

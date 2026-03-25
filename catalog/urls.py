@@ -17,4 +17,5 @@ urlpatterns = [
     path('mobile/products/<int:pk>/images/add/', views.mobile_product_image_add, name='mobile_product_image_add'),
     path('mobile/categories/<int:pk>/toggle-hidden/', views.mobile_category_toggle_hidden, name='mobile_category_toggle_hidden'),
     path('mobile/products/<int:pk>/toggle-hidden/', views.mobile_product_toggle_hidden, name='mobile_product_toggle_hidden'),
+    path('mobile/products/<int:pk>/toggle-category/<int:category_id>/', views.mobile_product_toggle_category, name='mobile_product_toggle_category'),
 ]

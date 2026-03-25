@@ -30,6 +30,19 @@
         </div>
     </div>
 </div>
+<div class="card">
+    <div class="card-body">
+        <div style="font-weight:600;margin-bottom:8px;">Категории</div>
+        {% for cat in all_categories %}
+        <label class="cat-checkbox-row" id="cat-row-{{ cat.id }}">
+            <input type="checkbox"
+                {% if cat.id in product_category_ids %}checked{% endif %}
+                onchange="toggleCategory(this, {{ product.id }}, {{ cat.id }})">
+            <span>{{ cat.name }}</span>
+        </label>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
