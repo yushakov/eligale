@@ -1,13 +1,11 @@
 #!/bin/bash
 set -e
 
-cd /home/eliza_app
-
 echo "==> git pull"
 git pull
 
 echo "==> pip install"
-source /home/venv/bin/activate
+source venv/bin/activate
 pip install -r requirements.txt
 
 echo "==> migrate"
