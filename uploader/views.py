@@ -94,6 +94,79 @@ def test_image_upload_api(request):
         }, status=500)
 
 
+def get_private_s3_client():
+    session = boto3.session.Session()
+    return session.client(
+        service_name="s3",
+        endpoint_url="https://storage.yandexcloud.net",
+        aws_access_key_id=settings.YA_PRIVATE_UPLOADER_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.YA_PRIVATE_UPLOADER_SECRET_ACCESS_KEY,
+        region_name=settings.YA_PRIVATE_UPLOADER_REGION_NAME,
+        config=Config(
+            signature_version="s3v4",
+            retries={"max_attempts": 2, "mode": "standard"},
+        ),
+    )
+
+
+@staff_member_required
+@require_http_methods(["GET"])
+def test_private_upload_page(request):
+    return render(request, "test_private_upload.html")
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def test_private_upload_presign_api(request):
+    filename = request.POST.get("filename")
+    content_type = request.POST.get("content_type")
+
+    if not filename:
+        return JsonResponse({"error": "filename is required"}, status=400)
+
+    if not content_type:
+        content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+    try:
+        object_key = build_object_key(filename)
+        s3 = get_private_s3_client()
+
+        upload_url = s3.generate_presigned_url(
+            ClientMethod="put_object",
+            Params={
+                "Bucket": settings.YA_PRIVATE_UPLOADER_BUCKET_NAME,
+                "Key": object_key,
+                "ContentType": content_type,
+            },
+            ExpiresIn=3600,
+            HttpMethod="PUT",
+        )
+
+        view_url = s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": settings.YA_PRIVATE_UPLOADER_BUCKET_NAME,
+                "Key": object_key,
+            },
+            ExpiresIn=60,
+        )
+
+        return JsonResponse({
+            "ok": True,
+            "upload_url": upload_url,
+            "view_url": view_url,
+            "object_key": object_key,
+            "content_type": content_type,
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "error": "Presign failed",
+            "details": repr(e),
+            "trace": traceback.format_exc(),
+        }, status=500)
+
+
 @require_http_methods(["POST"])
 def test_image_upload_presign_api(request):
     filename = request.POST.get("filename")
