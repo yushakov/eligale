@@ -1,5 +1,6 @@
 from django import forms
 from django.conf import settings
+from django.utils.safestring import mark_safe
 
 
 class ImageUploadWidget(forms.TextInput):
@@ -22,7 +23,7 @@ class ImageUploadWidget(forms.TextInput):
         if not public_url:
             preview_style += 'display:none;'
 
-        return f'''
+        return mark_safe(f'''
 <div style="display:flex;flex-direction:column;gap:4px;">
   <div style="display:flex;align-items:center;gap:8px;">
     <input type="text" name="{name}" value="{key}" id="{field_id}"
@@ -36,4 +37,4 @@ class ImageUploadWidget(forms.TextInput):
   <span id="{status_id}" style="font-size:12px;color:#666;"></span>
   <img id="{preview_id}" src="{public_url}" style="{preview_style}" alt="">
 </div>
-'''
+''')
