@@ -102,3 +102,34 @@ python manage.py runserver 0.0.0.0:8000
 - **V1** (текущий): каталог с изображениями, мобильный интерфейс управления
 - **V2**: комментарии, регистрация пользователей
 - **V3**: приватные чаты (голос/медиа через приватный бакет)
+
+---
+
+## V2 — Архитектура (запланировано, не реализовано)
+
+### Email-провайдер
+Выбран **AWS SES** — Mailgun и Resend не работают с российскими аккаунтами, Yandex Cloud Postbox и Unisender Go имеют задокументированные проблемы с доставкой в Gmail. AWS SES оплачивается британской картой, серверы в США/Европе, Gmail доверяет этим IP.
+Интеграция через `django-anymail` с бэкендом SES.
+
+### Новые модели
+```python
+EmailVerification: email, code (6 цифр), created_at, is_used
+# User — стандартная Django User, email как username, без пароля
+
+Comment: product (FK), user (FK), text, created_at
+```
+
+### Новые API эндпоинты
+```
+POST /api/auth/request-code/   — принимает email, отправляет код, код живёт 15 минут
+POST /api/auth/verify-code/    — принимает email+code, возвращает token
+POST /api/products/<id>/comments/   — требует Authorization: Token <token>
+GET  /api/products/<id>/comments/   — публичный
+```
+
+### Android flow
+Кнопка "Написать комментарий" → если нет токена → модальное окно с email → модальное окно с кодом → токен сохраняется в SharedPreferences → поле ввода комментария.
+
+### Открытые вопросы (решить перед реализацией)
+- Имя пользователя: просить при регистрации или брать из email (часть до @)?
+- Комментарии V2: только текст, или сразу лайки/ответы?
