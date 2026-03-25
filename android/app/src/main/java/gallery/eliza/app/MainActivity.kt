@@ -4,13 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import gallery.eliza.app.ui.screens.CategoryScreen
+import gallery.eliza.app.ui.screens.ProductDetailScreen
+import gallery.eliza.app.ui.screens.ProductListScreen
 import gallery.eliza.app.ui.theme.ElizaGalleryTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +20,38 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ElizaGalleryTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = "categories") {
+                    composable("categories") {
+                        CategoryScreen(onCategoryClick = { id, name ->
+                            navController.navigate("products/$id?name=${name}")
+                        })
+                    }
+                    composable(
+                        "products/{categoryId}?name={name}",
+                        arguments = listOf(
+                            navArgument("categoryId") { type = NavType.IntType },
+                            navArgument("name") { defaultValue = "" }
+                        )
+                    ) { backStack ->
+                        ProductListScreen(
+                            categoryId = backStack.arguments!!.getInt("categoryId"),
+                            categoryName = backStack.arguments!!.getString("name") ?: "",
+                            onProductClick = { id -> navController.navigate("product/$id") },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(
+                        "product/{productId}",
+                        arguments = listOf(navArgument("productId") { type = NavType.IntType })
+                    ) { backStack ->
+                        ProductDetailScreen(
+                            productId = backStack.arguments!!.getInt("productId"),
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ElizaGalleryTheme {
-        Greeting("Android")
     }
 }
