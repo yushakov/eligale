@@ -1,0 +1,31 @@
+{% extends "mobile/base.html" %}
+{% block title %}Категории{% endblock %}
+{% block heading %}Категории{% endblock %}
+
+{% block content %}
+<a href="{% url 'mobile2_category_add' %}" class="btn">+ Добавить категорию</a>
+
+{% if categories %}
+    {% for cat in categories %}
+    <div class="card{% if cat.is_hidden %} card-hidden{% endif %}" id="cat-{{ cat.id }}">
+        <a href="{% url 'mobile2_category_detail' cat.id %}">
+            {% if cat.cover_key %}
+            <img class="card-img" src="{{ public_base }}/{{ cat.cover_key }}" alt="{{ cat.name }}">
+            {% else %}
+            <div style="height:80px;background:#eee;"></div>
+            {% endif %}
+            <div class="card-body">
+                <div class="card-title">{{ cat.name }}</div>
+            </div>
+        </a>
+        <div class="card-footer">
+            <button class="toggle-btn" data-url="{% url 'mobile_category_toggle_hidden' cat.id %}" data-id="cat-{{ cat.id }}" onclick="toggleHidden(this)">
+                {% if cat.is_hidden %}Показать{% else %}Скрыть{% endif %}
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="empty">Нет категорий</div>
+{% endif %}
+{% endblock %}

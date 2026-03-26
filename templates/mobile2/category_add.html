@@ -1,0 +1,29 @@
+{% extends "mobile/base.html" %}
+{% block title %}Новая категория{% endblock %}
+{% block heading %}Новая категория{% endblock %}
+{% block back %}<a href="{% url 'mobile2_home' %}">←</a>{% endblock %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="cover_key" id="cover_key">
+
+    <div class="form-group">
+        <label>Название</label>
+        <input type="text" name="name" required autofocus>
+    </div>
+
+    <div class="form-group">
+        <label>Обложка</label>
+        <label class="upload-btn">
+            Выбрать фото
+            <input type="file" accept="image/*" style="display:none"
+                   onchange="uploadImage(this, 'cover_key', 'cover_preview', 'cover_status')">
+        </label>
+        <div class="upload-status" id="cover_status"></div>
+        <img id="cover_preview" class="cover-preview">
+    </div>
+
+    <button type="submit" class="btn">Создать категорию</button>
+</form>
+{% endblock %}

@@ -226,6 +226,100 @@ def mobile_product_toggle_category(request, pk, category_id):
     return JsonResponse({'ok': True, 'assigned': assigned})
 
 
+# ── Mobile2 views ─────────────────────────────────────────────────────────────
+
+@staff_member_required
+def mobile2_home(request):
+    categories = Category.objects.all().order_by('name')
+    return render(request, 'mobile2/home.html', {
+        'categories': categories,
+        'public_base': PUBLIC_BASE,
+    })
+
+
+@staff_member_required
+def mobile2_category_add(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        cover_key = request.POST.get('cover_key', '').strip()
+        if name:
+            cat = Category.objects.create(name=name, cover_key=cover_key)
+            return redirect('mobile2_category_detail', pk=cat.pk)
+    return render(request, 'mobile2/category_add.html')
+
+
+@staff_member_required
+def mobile2_category_detail(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    products = category.products.all().order_by('-created_at')
+    return render(request, 'mobile2/category_detail.html', {
+        'category': category,
+        'products': products,
+        'public_base': PUBLIC_BASE,
+    })
+
+
+@staff_member_required
+def mobile2_product_add(request, category_id):
+    category = get_object_or_404(Category, pk=category_id)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        split = request.POST.get('split') == 'on'
+        image_keys = json.loads(request.POST.get('image_keys', '[]'))
+
+        if not name:
+            return render(request, 'mobile2/product_add.html', {'category': category})
+
+        if not image_keys:
+            # Нет фото — создаём товар без обложки
+            product = Product.objects.create(name=name, description=description)
+            product.categories.add(category)
+            return redirect('mobile2_product_detail', pk=product.pk)
+
+        if split and len(image_keys) > 1:
+            # Разбиваем на отдельные товары
+            first_product = None
+            for i, key in enumerate(image_keys, start=1):
+                product = Product.objects.create(
+                    name=f'{name} {i}',
+                    description=description,
+                    cover_key=key,
+                )
+                product.categories.add(category)
+                if first_product is None:
+                    first_product = product
+            return redirect('mobile2_category_detail', pk=category_id)
+        else:
+            # Один товар: первая фото — обложка, остальные — галерея
+            product = Product.objects.create(
+                name=name,
+                description=description,
+                cover_key=image_keys[0],
+            )
+            product.categories.add(category)
+            for key in image_keys[1:]:
+                ProductImage.objects.create(product=product, image_key=key)
+            return redirect('mobile2_product_detail', pk=product.pk)
+
+    return render(request, 'mobile2/product_add.html', {'category': category})
+
+
+@staff_member_required
+def mobile2_product_detail(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    images = product.images.all().order_by('id')
+    all_categories = Category.objects.all().order_by('name')
+    product_category_ids = set(product.categories.values_list('id', flat=True))
+    return render(request, 'mobile2/product_detail.html', {
+        'product': product,
+        'images': images,
+        'public_base': PUBLIC_BASE,
+        'all_categories': all_categories,
+        'product_category_ids': product_category_ids,
+    })
+
+
 @staff_member_required
 @require_http_methods(['POST'])
 def mobile_category_toggle_hidden(request, pk):

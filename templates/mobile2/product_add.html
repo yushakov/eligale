@@ -1,0 +1,94 @@
+{% extends "mobile/base.html" %}
+{% block title %}Новый товар{% endblock %}
+{% block heading %}Новый товар{% endblock %}
+{% block back %}<a href="{% url 'mobile2_category_detail' category.id %}">←</a>{% endblock %}
+
+{% block content %}
+<form method="post" id="product-form">
+    {% csrf_token %}
+    <input type="hidden" name="image_keys" id="image_keys" value="[]">
+
+    <div class="form-group">
+        <label>Название</label>
+        <input type="text" name="name" id="name" required autofocus>
+    </div>
+
+    <div class="form-group">
+        <label>Описание</label>
+        <textarea name="description"></textarea>
+    </div>
+
+    <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" name="split" id="split" style="width:20px;height:20px;accent-color:#111;flex-shrink:0;">
+        <label for="split" style="font-size:15px;color:#333;margin:0;">Разбить на отдельные товары</label>
+    </div>
+
+    <div class="form-group">
+        <label>Фотографии</label>
+        <label class="upload-btn">
+            Выбрать фото
+            <input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+        </label>
+        <div class="upload-status" id="photo_status"></div>
+        <div class="images-grid" id="preview_grid" style="margin-top:10px;"></div>
+    </div>
+
+    <button type="submit" class="btn" id="submit-btn">Создать</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const uploadedKeys = [];
+
+async function handlePhotos(input) {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+    const status = document.getElementById('photo_status');
+    const grid = document.getElementById('preview_grid');
+    let done = 0, failed = 0;
+
+    // Сбрасываем предыдущие
+    uploadedKeys.length = 0;
+    grid.innerHTML = '';
+
+    for (const file of files) {
+        status.textContent = `Загружаю ${done + 1} из ${files.length}...`;
+        status.style.color = '#666';
+        try {
+            const fd = new FormData();
+            fd.append('filename', file.name);
+            fd.append('content_type', file.type || 'application/octet-stream');
+            const r = await fetch('/api/catalog/upload/presign', {
+                method: 'POST', body: fd,
+                headers: {'X-CSRFToken': getCookie('csrftoken')},
+                credentials: 'same-origin'
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error);
+            await fetch(data.upload_url, {
+                method: 'PUT', headers: {'Content-Type': data.content_type}, body: file
+            });
+            uploadedKeys.push(data.object_key);
+            const img = document.createElement('img');
+            img.src = data.public_url;
+            grid.appendChild(img);
+            done++;
+        } catch(e) {
+            failed++;
+        }
+    }
+
+    document.getElementById('image_keys').value = JSON.stringify(uploadedKeys);
+
+    if (failed === 0) {
+        status.textContent = `✓ Загружено ${done}`;
+        status.style.color = 'green';
+    } else {
+        status.textContent = `Загружено ${done}, ошибок ${failed}`;
+        status.style.color = done > 0 ? 'orange' : 'red';
+    }
+    input.value = '';
+}
+</script>
+{% endblock %}
