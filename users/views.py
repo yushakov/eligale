@@ -1,5 +1,8 @@
+import logging
 import random
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -24,6 +27,8 @@ def request_code(request):
 
     code = f'{random.randint(0, 999999):06d}'
     EmailVerification.objects.create(email=email, code=code)
+
+    logger.info('Verification code for %s: %s', email, code)
 
     send_mail(
         subject='Ваш код подтверждения — Eliza Gallery',
