@@ -21,6 +21,7 @@ from main.views import index
 urlpatterns = [
     path("", include("uploader.urls")),
     path("", include("catalog.urls")),
+    path("", include("users.urls")),
     path("", index),
     path('admin/', admin.site.urls),
 ]
