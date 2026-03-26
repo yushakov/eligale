@@ -194,3 +194,84 @@ class UniqueDisplayNameTest(TestCase):
     def test_all_display_names_are_unique(self):
         names = [self._set_name(f'user{i}@example.com', 'Аня') for i in range(5)]
         self.assertEqual(len(set(names)), 5)
+
+    def test_same_name_returned_without_hash(self):
+        """Если пользователь отправляет своё же имя — хэш не добавляется."""
+        name1 = self._set_name('a@example.com', 'Аня')
+        self.assertEqual(name1, 'Аня')
+        user = User.objects.get(email='a@example.com')
+        token = Token.objects.get(user=user)
+        r = self.client.post(
+            '/api/auth/set-name/',
+            {'name': 'Аня'},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Token {token.key}',
+        )
+        self.assertEqual(r.json()['display_name'], 'Аня')
+
+
+class ProfileTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='user@example.com')
+        self.user.display_name = 'Мария'
+        self.user.save()
+        self.token = Token.objects.create(user=self.user)
+
+    def _get(self, token=None):
+        headers = {}
+        if token:
+            headers['HTTP_AUTHORIZATION'] = f'Token {token}'
+        return self.client.get('/api/auth/profile/', **headers)
+
+    def test_returns_email_and_display_name(self):
+        r = self._get(token=self.token.key)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['email'], 'user@example.com')
+        self.assertEqual(r.json()['display_name'], 'Мария')
+
+    def test_empty_display_name_returned_as_empty_string(self):
+        self.user.display_name = ''
+        self.user.save()
+        r = self._get(token=self.token.key)
+        self.assertEqual(r.json()['display_name'], '')
+
+    def test_requires_auth(self):
+        r = self._get()
+        self.assertEqual(r.status_code, 401)
+
+    def test_wrong_token_returns_401(self):
+        r = self._get(token='invalidtoken')
+        self.assertEqual(r.status_code, 401)
+
+
+class DeleteAccountTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='user@example.com')
+        self.token = Token.objects.create(user=self.user)
+
+    def _delete(self, token=None):
+        headers = {}
+        if token:
+            headers['HTTP_AUTHORIZATION'] = f'Token {token}'
+        return self.client.delete('/api/auth/delete-account/', **headers)
+
+    def test_deletes_user(self):
+        self._delete(token=self.token.key)
+        self.assertFalse(User.objects.filter(email='user@example.com').exists())
+
+    def test_returns_ok(self):
+        r = self._delete(token=self.token.key)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()['ok'])
+
+    def test_requires_auth(self):
+        r = self._delete()
+        self.assertEqual(r.status_code, 401)
+
+    def test_token_invalidated_after_deletion(self):
+        """После удаления аккаунта токен тоже удаляется (каскад)."""
+        token_key = self.token.key
+        self._delete(token=token_key)
+        self.assertFalse(Token.objects.filter(key=token_key).exists())

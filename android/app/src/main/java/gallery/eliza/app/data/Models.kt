@@ -35,6 +35,8 @@ data class Comment(
     val created_at: String
 )
 
+data class UserProfile(val email: String, val display_name: String)
+
 data class RequestCodeBody(val email: String)
 data class VerifyCodeBody(val email: String, val code: String)
 data class TokenResponse(val token: String, val has_name: Boolean)

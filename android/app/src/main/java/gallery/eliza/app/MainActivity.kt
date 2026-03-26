@@ -4,13 +4,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import gallery.eliza.app.data.TokenStorage
 import gallery.eliza.app.ui.screens.CategoryScreen
 import gallery.eliza.app.ui.screens.ProductDetailScreen
 import gallery.eliza.app.ui.screens.ProductListScreen
@@ -26,6 +31,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ElizaGalleryTheme {
+                val context = LocalContext.current
+                var token by remember { mutableStateOf(TokenStorage.get(context)) }
+                val onTokenChange: (String?) -> Unit = { newToken ->
+                    if (newToken != null) TokenStorage.save(context, newToken) else TokenStorage.clear(context)
+                    token = newToken
+                }
+
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = "categories") {
                     composable("categories") {
@@ -33,7 +45,9 @@ class MainActivity : ComponentActivity() {
                             onCategoryClick = { id, name ->
                                 navController.navigate("products/$id?name=${name}")
                             },
-                            onReady = { isReady.value = true }
+                            onReady = { isReady.value = true },
+                            token = token,
+                            onTokenChange = onTokenChange
                         )
                     }
                     composable(
@@ -56,7 +70,9 @@ class MainActivity : ComponentActivity() {
                     ) { backStack ->
                         ProductDetailScreen(
                             productId = backStack.arguments!!.getInt("productId"),
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            token = token,
+                            onTokenChange = onTokenChange
                         )
                     }
                 }

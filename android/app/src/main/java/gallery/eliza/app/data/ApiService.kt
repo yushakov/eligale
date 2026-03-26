@@ -35,6 +35,12 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body body: SetNameBody
     ): SetNameResponse
+
+    @GET("api/auth/profile/")
+    suspend fun getProfile(@Header("Authorization") token: String): UserProfile
+
+    @DELETE("api/auth/delete-account/")
+    suspend fun deleteAccount(@Header("Authorization") token: String)
 }
 
 object Api {

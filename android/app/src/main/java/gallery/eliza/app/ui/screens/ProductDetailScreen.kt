@@ -23,18 +23,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Comment
 import gallery.eliza.app.data.ProductDetail
-import gallery.eliza.app.data.TokenStorage
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun ProductDetailScreen(productId: Int, onBack: () -> Unit) {
-    val context = LocalContext.current
+fun ProductDetailScreen(
+    productId: Int,
+    onBack: () -> Unit,
+    token: String?,
+    onTokenChange: (String?) -> Unit
+) {
     var product by remember { mutableStateOf<ProductDetail?>(null) }
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -42,7 +44,6 @@ fun ProductDetailScreen(productId: Int, onBack: () -> Unit) {
     var showAuth by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     var sendingComment by remember { mutableStateOf(false) }
-    var token by remember { mutableStateOf(TokenStorage.get(context)) }
     var fullscreenUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(productId) {
@@ -59,8 +60,7 @@ fun ProductDetailScreen(productId: Int, onBack: () -> Unit) {
     if (showAuth) {
         AuthDialog(
             onTokenReceived = { newToken ->
-                TokenStorage.save(context, newToken)
-                token = newToken
+                onTokenChange(newToken)
                 showAuth = false
             },
             onDismiss = { showAuth = false }
@@ -209,8 +209,7 @@ fun ProductDetailScreen(productId: Int, onBack: () -> Unit) {
                                     commentText = ""
                                 } catch (e: Exception) {
                                     if (e.message?.contains("401") == true) {
-                                        TokenStorage.clear(context)
-                                        token = null
+                                        onTokenChange(null)
                                         showAuth = true
                                     }
                                 } finally {

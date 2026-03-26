@@ -93,8 +93,34 @@ def set_name(request):
     if not name:
         return Response({'error': 'name is required'}, status=status.HTTP_400_BAD_REQUEST)
 
+    if name == user.display_name:
+        return Response({'display_name': user.display_name})
+
     display_name = _unique_display_name(name)
     user.display_name = display_name
     user.save(update_fields=['display_name'])
 
     return Response({'display_name': display_name})
+
+
+@api_view(['GET'])
+def profile(request):
+    auth = TokenAuthentication()
+    try:
+        user, _ = auth.authenticate(request)
+    except Exception:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return Response({'email': user.email, 'display_name': user.display_name or ''})
+
+
+@api_view(['DELETE'])
+def delete_account(request):
+    auth = TokenAuthentication()
+    try:
+        user, _ = auth.authenticate(request)
+    except Exception:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user.delete()
+    return Response({'ok': True})

@@ -18,10 +18,17 @@ import gallery.eliza.app.data.Category
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryScreen(onCategoryClick: (Int, String) -> Unit, onReady: () -> Unit) {
+fun CategoryScreen(
+    onCategoryClick: (Int, String) -> Unit,
+    onReady: () -> Unit,
+    token: String?,
+    onTokenChange: (String?) -> Unit
+) {
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showAuth by remember { mutableStateOf(false) }
+    var showAccount by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         try {
@@ -34,8 +41,44 @@ fun CategoryScreen(onCategoryClick: (Int, String) -> Unit, onReady: () -> Unit) 
         }
     }
 
+    if (showAuth) {
+        AuthDialog(
+            onTokenReceived = { newToken ->
+                onTokenChange(newToken)
+                showAuth = false
+            },
+            onDismiss = { showAuth = false }
+        )
+    }
+
+    if (showAccount && token != null) {
+        AccountDialog(
+            token = token,
+            onSignOut = {
+                onTokenChange(null)
+                showAccount = false
+            },
+            onDeleted = {
+                onTokenChange(null)
+                showAccount = false
+            },
+            onDismiss = { showAccount = false }
+        )
+    }
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Eliza Gallery") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Eliza Gallery") },
+                actions = {
+                    TextButton(onClick = {
+                        if (token == null) showAuth = true else showAccount = true
+                    }) {
+                        Text(if (token == null) "Войти" else "Аккаунт")
+                    }
+                }
+            )
+        }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
