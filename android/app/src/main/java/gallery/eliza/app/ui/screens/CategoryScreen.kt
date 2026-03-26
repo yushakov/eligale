@@ -18,7 +18,7 @@ import gallery.eliza.app.data.Category
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryScreen(onCategoryClick: (Int, String) -> Unit) {
+fun CategoryScreen(onCategoryClick: (Int, String) -> Unit, onReady: () -> Unit) {
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -30,6 +30,7 @@ fun CategoryScreen(onCategoryClick: (Int, String) -> Unit) {
             error = e.message
         } finally {
             loading = false
+            onReady()
         }
     }
 
@@ -38,7 +39,7 @@ fun CategoryScreen(onCategoryClick: (Int, String) -> Unit) {
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
-                loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                loading -> {}
                 error != null -> Text("Ошибка: $error", Modifier.align(Alignment.Center))
                 else -> LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
