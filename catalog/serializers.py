@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import Category, Product, ProductImage
+from .models import Category, Product, ProductImage, Comment
 
 
 def _public_url(key):
@@ -53,3 +53,14 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     def get_cover_url(self, obj):
         return _public_url(obj.cover_key)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'author', 'text', 'created_at']
+
+    def get_author(self, obj):
+        return obj.user.email.split('@')[0]

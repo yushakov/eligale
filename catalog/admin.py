@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from .models import Category, Product, ProductImage
+from .models import Category, Product, ProductImage, Comment
 from .widgets import ImageUploadWidget
 
 
@@ -49,3 +49,9 @@ class ProductAdmin(admin.ModelAdmin):
 @admin.register(ProductImage)
 class ProductImageAdmin(admin.ModelAdmin):
     list_display = ['product', 'order', 'created_at']
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ['product', 'user', 'text', 'created_at']
+    readonly_fields = ['created_at']

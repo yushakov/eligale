@@ -17,8 +17,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Category, Product, ProductImage
-from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+
+from .models import Category, Product, ProductImage, Comment
+from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer
 
 
 def _get_s3_client():
@@ -102,6 +105,29 @@ def presign_upload(request):
         'public_url': public_url,
         'content_type': content_type,
     })
+
+
+@api_view(['GET', 'POST'])
+def comment_list(request, product_id):
+    product = get_object_or_404(Product, pk=product_id)
+
+    if request.method == 'GET':
+        comments = product.comments.select_related('user').all()
+        return Response(CommentSerializer(comments, many=True).data)
+
+    # POST — требует авторизации
+    auth = TokenAuthentication()
+    try:
+        user, _ = auth.authenticate(request)
+    except Exception:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    text = request.data.get('text', '').strip()
+    if not text:
+        return Response({'error': 'text is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    comment = Comment.objects.create(product=product, user=user, text=text)
+    return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
 
 # ── Mobile views ──────────────────────────────────────────────────────────────
