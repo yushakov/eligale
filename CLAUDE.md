@@ -154,3 +154,15 @@ python manage.py runserver 0.0.0.0:8000
 ## V2 — открытые вопросы
 - Комментарии V2: только текст, или сразу лайки/ответы?
 - AWS SES production access: запрос отправлен, статус "More information needed", ожидаем ответа
+
+## Запланировано на будущее
+
+### Шеринг товаров (App Links)
+Пользователь копирует ссылку на товар и отправляет её. Если у получателя есть приложение — оно открывает товар напрямую. Если нет — браузер открывает веб-страницу товара.
+
+Что нужно реализовать:
+1. **Django**: веб-страница товара `GET /products/{id}/` — картинка, название, описание (fallback для браузера)
+2. **Django**: файл `/.well-known/assetlinks.json` — верификация App Links для домена `eliza.gallery`
+3. **Android**: `intent-filter` в `AndroidManifest.xml` для `https://eliza.gallery/products/{id}/` с `android:autoVerify="true"`
+4. **Android**: в `MainActivity` перехватывать входящий `Intent` и навигировать на `ProductDetailScreen`
+5. **Android**: кнопка "Поделиться" в `ProductDetailScreen`, шерит `https://eliza.gallery/products/{id}/`
