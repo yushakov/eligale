@@ -1,54 +1,222 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eliza.Gallery</title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            margin: 0;
-            font-family: Arial;
-            background: #111827;
-            color: white;
-            text-align: center;
+            background: #fff;
+            color: #111;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
-        .wrap {
-            padding: 40px 20px;
+
+        /* Фоновый слой с тайлами */
+        #tiles {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
         }
-        img {
-            max-width: 90%;
-            border-radius: 16px;
+
+        .tile {
+            position: absolute;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            /* Размываем края через маску */
+            -webkit-mask-image: radial-gradient(circle, black 45%, transparent 72%);
+            mask-image: radial-gradient(circle, black 45%, transparent 72%);
+            opacity: 0.75;
         }
+
+        /* Центральный контент */
+        #center {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            padding: 60px 20px;
+        }
+
+        #logo {
+            width: min(260px, 55vw);
+            height: min(260px, 55vw);
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+        }
+
         a.button {
             display: inline-block;
-            margin-top: 30px;
-            padding: 15px 25px;
+            padding: 15px 32px;
             background: #2563eb;
             color: white;
             text-decoration: none;
-            border-radius: 10px;
+            border-radius: 12px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            box-shadow: 0 4px 16px rgba(37,99,235,0.25);
+        }
+
+        .note {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            text-align: center;
+            color: #333;
+            max-width: 480px;
         }
     </style>
 </head>
 <body>
-    <div class="wrap">
-        <!--img src="{% static 'eliza_landing_2.png' %}" alt="Eliza"-->
-        <img src="https://storage.yandexcloud.net/gallery-media-public/landing_image.png" alt="Eliza">
-        <!--h1>Eliza.Gallery</h1>
-        <p>Вещи по-королевски от Елизаветы</p-->
-	<br />
-        <a class="button" href="https://t.me/+V1aBQ03yztk5Nzdi"
-		style="font-size: xx-large;">
-            Перейти в Telegram
-        </a>
-	<br /><br />
-	<div style="font-size: xx-large;">
-	Телеграм едва жив, поэтому скоро<br />
-	здесь появится ссылка на приложение для смартфона.<br /><br />
-	В Телеграм переходить не нужно.<br />
-	Разве только чтобы проверить, что группа та самая.<br />
-	Пока она ещё открывается у Вас в Телеграме...
-	</div>
-    </div>
+
+<div id="tiles"></div>
+
+<div id="center">
+    <img id="logo"
+         src="https://storage.yandexcloud.net/gallery-media-public/landing/logo-central.png"
+         alt="Eliza Gallery">
+
+    <a class="button" href="https://t.me/+V1aBQ03yztk5Nzdi">
+        Перейти в Telegram
+    </a>
+
+    <p class="note">
+        Телеграм едва жив, поэтому скоро<br>
+        здесь появится ссылка на приложение для смартфона.<br><br>
+        В Телеграм переходить не нужно.<br>
+        Разве только чтобы проверить, что группа та самая.<br>
+        Пока она ещё открывается у Вас в Телеграме…
+    </p>
+</div>
+
+<script>
+const TILES = [
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img001.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img002.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img003.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img004.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img005.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img006.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img007.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img008.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img009.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img010.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img011.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img012.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img013.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img014.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img015.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img016.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img017.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img018.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img019.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img020.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img021.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img022.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img023.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img024.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img025.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img026.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img027.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img028.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img029.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img030.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img031.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img032.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img033.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img034.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img035.jpg",
+    "https://storage.yandexcloud.net/gallery-media-public/landing/tile/landing_img036.jpg",
+];
+
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function placeTiles() {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const N = TILES.length;
+
+    // Берём реальное положение логотипа из DOM
+    const logoEl = document.getElementById('logo');
+    const lr = logoEl.getBoundingClientRect();
+    const logoCx = lr.left + lr.width / 2;
+    const logoCy = lr.top + lr.height / 2;
+    const logoR  = lr.width / 2;
+
+    // Защитный эллипс: закрывает логотип + кнопку + текст ниже.
+    // Горизонтальная полуось = радиус логотипа + небольшой отступ.
+    // Вертикальная полуось = тянется вниз до нижнего края контента.
+    // Центр эллипса смещён вниз, чтобы симметрично охватить логотип сверху
+    // и текст с кнопкой снизу.
+    const ellipseRx = logoR + 30;
+    const ellipseRy = logoR + 220;           // ~200px ниже логотипа на кнопку+текст
+    const ellipseCy = logoCy + 110;          // центр эллипса чуть ниже центра логотипа
+
+    function isBlocked(cx, cy) {
+        const dx = (cx - logoCx) / ellipseRx;
+        const dy = (cy - ellipseCy) / ellipseRy;
+        return dx * dx + dy * dy <= 1;
+    }
+
+    // Подбираем сетку cols×rows под соотношение сторон экрана
+    const cols = Math.round(Math.sqrt(N * W / H));
+    const rows = Math.ceil(N / cols);
+
+    const cellW = W / cols;
+    const cellH = H / rows;
+    const tileSize = Math.min(cellW, cellH);
+    const tileR = tileSize / 2;
+
+    const freeCells = [];
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const cx = (c + 0.5) * cellW;
+            const cy = (r + 0.5) * cellH;
+            if (!isBlocked(cx, cy)) freeCells.push({ cx, cy });
+        }
+    }
+    shuffle(freeCells);
+
+    const container = document.getElementById('tiles');
+    const urls = shuffle([...TILES]);
+
+    urls.forEach((url, i) => {
+        if (i >= freeCells.length) return;
+        const cell = freeCells[i];
+
+        const dx = (Math.random() - 0.5) * 0.2 * cellW;
+        const dy = (Math.random() - 0.5) * 0.2 * cellH;
+
+        const el = document.createElement('div');
+        el.className = 'tile';
+        el.style.cssText = `
+            width: ${tileSize}px;
+            height: ${tileSize}px;
+            left: ${cell.cx + dx - tileR}px;
+            top: ${cell.cy + dy - tileR}px;
+            background-image: url('${url}');
+        `;
+        container.appendChild(el);
+    });
+}
+
+// Запускаем после полного рендера, чтобы getBoundingClientRect вернул реальные координаты
+window.addEventListener('load', placeTiles);
+</script>
 </body>
 </html>
