@@ -2,8 +2,7 @@ package gallery.eliza.app.data
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.GET
-import retrofit2.http.Path
+import retrofit2.http.*
 
 interface ApiService {
     @GET("api/categories/")
@@ -14,6 +13,22 @@ interface ApiService {
 
     @GET("api/products/{id}/")
     suspend fun getProduct(@Path("id") productId: Int): ProductDetail
+
+    @GET("api/products/{id}/comments/")
+    suspend fun getComments(@Path("id") productId: Int): List<Comment>
+
+    @POST("api/products/{id}/comments/")
+    suspend fun postComment(
+        @Path("id") productId: Int,
+        @Header("Authorization") token: String,
+        @Body body: Map<String, String>
+    ): Comment
+
+    @POST("api/auth/request-code/")
+    suspend fun requestCode(@Body body: RequestCodeBody)
+
+    @POST("api/auth/verify-code/")
+    suspend fun verifyCode(@Body body: VerifyCodeBody): TokenResponse
 }
 
 object Api {
