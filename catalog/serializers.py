@@ -63,4 +63,4 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'author', 'text', 'created_at']
 
     def get_author(self, obj):
-        return obj.user.email.split('@')[0]
+        return obj.user.display_name or obj.user.email.split('@')[0]

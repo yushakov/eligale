@@ -1,5 +1,6 @@
 import logging
 import random
+import uuid
 from datetime import timedelta
 
 logger = logging.getLogger(__name__)
@@ -10,9 +11,20 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 
 from .models import EmailVerification
+
+
+def _unique_display_name(name: str) -> str:
+    """Возвращает уникальное display_name, добавляя хэш если имя занято."""
+    if not User.objects.filter(display_name=name).exists():
+        return name
+    while True:
+        candidate = f'{name} #{uuid.uuid4().hex[:4]}'
+        if not User.objects.filter(display_name=candidate).exists():
+            return candidate
 
 User = get_user_model()
 
@@ -66,4 +78,23 @@ def verify_code(request):
     user, _ = User.objects.get_or_create(email=email)
     token, _ = Token.objects.get_or_create(user=user)
 
-    return Response({'token': token.key})
+    return Response({'token': token.key, 'has_name': bool(user.display_name)})
+
+
+@api_view(['POST'])
+def set_name(request):
+    auth = TokenAuthentication()
+    try:
+        user, _ = auth.authenticate(request)
+    except Exception:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    name = request.data.get('name', '').strip()
+    if not name:
+        return Response({'error': 'name is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    display_name = _unique_display_name(name)
+    user.display_name = display_name
+    user.save(update_fields=['display_name'])
+
+    return Response({'display_name': display_name})

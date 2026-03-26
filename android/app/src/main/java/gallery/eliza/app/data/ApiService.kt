@@ -29,6 +29,12 @@ interface ApiService {
 
     @POST("api/auth/verify-code/")
     suspend fun verifyCode(@Body body: VerifyCodeBody): TokenResponse
+
+    @POST("api/auth/set-name/")
+    suspend fun setName(
+        @Header("Authorization") token: String,
+        @Body body: SetNameBody
+    ): SetNameResponse
 }
 
 object Api {

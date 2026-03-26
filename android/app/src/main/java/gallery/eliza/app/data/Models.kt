@@ -37,4 +37,6 @@ data class Comment(
 
 data class RequestCodeBody(val email: String)
 data class VerifyCodeBody(val email: String, val code: String)
-data class TokenResponse(val token: String)
+data class TokenResponse(val token: String, val has_name: Boolean)
+data class SetNameBody(val name: String)
+data class SetNameResponse(val display_name: String)
