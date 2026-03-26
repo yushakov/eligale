@@ -6,9 +6,9 @@ from .models import User, EmailVerification
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     ordering = ['email']
-    list_display = ['email', 'is_staff', 'is_active', 'date_joined']
+    list_display = ['email', 'display_name', 'is_staff', 'is_active', 'date_joined']
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
+        (None, {'fields': ('email', 'display_name', 'password')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
     )
     add_fieldsets = (
