@@ -30,8 +30,8 @@
             background-position: center;
             /* Размываем края через маску */
             -webkit-mask-image: radial-gradient(circle, black 45%, transparent 72%);
-            mask-image: radial-gradient(circle, black 45%, transparent 72%);
-            opacity: 0.75;
+            mask-image: radial-gradient(circle, black 45%, transparent 62%);
+            opacity: 0.85;
         }
 
         /* Центральный контент */
@@ -68,7 +68,7 @@
         }
 
         .note {
-            font-size: 1.1rem;
+            font-size: 0.8rem;
             line-height: 1.6;
             text-align: center;
             color: #333;
@@ -164,8 +164,8 @@ function placeTiles() {
     // Центр эллипса смещён вниз, чтобы симметрично охватить логотип сверху
     // и текст с кнопкой снизу.
     const ellipseRx = logoR + 30;
-    const ellipseRy = logoR + 220;           // ~200px ниже логотипа на кнопку+текст
-    const ellipseCy = logoCy + 110;          // центр эллипса чуть ниже центра логотипа
+    const ellipseRy = logoR + 120;           // ~200px ниже логотипа на кнопку+текст
+    const ellipseCy = logoCy + 70;          // центр эллипса чуть ниже центра логотипа
 
     function isBlocked(cx, cy) {
         const dx = (cx - logoCx) / ellipseRx;
