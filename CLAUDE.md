@@ -100,9 +100,14 @@ EmailVerification: email, code (6 цифр), created_at, is_used
 
 ## Android
 - Экраны: CategoryScreen → ProductListScreen → ProductDetailScreen
-- ProductDetailScreen: галерея (HorizontalPager), описание, комментарии, поле ввода
+- **CategoryScreen**: плитка 2 колонки, круглые обложки с мягкими краями (radial gradient), название в полупрозрачном прямоугольнике поверх нижней четверти круга
+- **ProductListScreen**: сетка 4 колонки, квадратные обрезанные фото без подписей
+- **ProductDetailScreen**: галерея (HorizontalPager), двойной тап → fullscreen с зумом и кнопкой "Скачать" (DownloadManager), описание, комментарии, поле ввода
 - AuthDialog: 3 шага — email → код → имя (шаг 3 только при первом входе)
 - TokenStorage: токен в SharedPreferences
+- Тема: белый фон, тёмно-коричневый текст (#3E2000), без dynamic color и тёмной темы
+- Pull-to-refresh на всех экранах с аддитивным мёржем по ID (новые добавляются, удалённые игнорируются)
+- При сетевой ошибке: экран с кнопкой "Переподключиться" вместо сырого текста
 
 ## Переменные окружения (.env, не в git)
 ```
