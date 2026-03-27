@@ -159,6 +159,63 @@ class CommentListAPITest(TestCase):
         self.assertEqual(r.status_code, 404)
 
 
+class Mobile2CategoryDetailTest(TestCase):
+    """Тест страницы категории в mobile2 — плиточный вид."""
+
+    def setUp(self):
+        self.client = Client()
+        self.staff = User.objects.create_superuser(email='admin@example.com', password='pass')
+        self.category = Category.objects.create(name='Посуда')
+        self.visible = Product.objects.create(name='Чашка', cover_key='img/cup.jpg')
+        self.visible.categories.add(self.category)
+        self.hidden = Product.objects.create(name='Скрытая тарелка', cover_key='img/plate.jpg', is_hidden=True)
+        self.hidden.categories.add(self.category)
+
+    def _get(self):
+        self.client.force_login(self.staff)
+        return self.client.get(f'/mobile2/categories/{self.category.pk}/')
+
+    def test_requires_staff(self):
+        r = self.client.get(f'/mobile2/categories/{self.category.pk}/')
+        self.assertEqual(r.status_code, 302)
+
+    def test_returns_200_for_staff(self):
+        self.assertEqual(self._get().status_code, 200)
+
+    def test_visible_product_appears(self):
+        r = self._get()
+        self.assertContains(r, 'img/cup.jpg')
+
+    def test_hidden_product_also_appears(self):
+        # В отличие от API, скрытые товары видны в интерфейсе управления
+        r = self._get()
+        self.assertContains(r, 'img/plate.jpg')
+
+    def test_hidden_product_has_card_hidden_class(self):
+        r = self._get()
+        content = r.content.decode()
+        hidden_tile_start = content.find(f'id="prod-{self.hidden.pk}"')
+        self.assertIn('card-hidden', content[hidden_tile_start - 50:hidden_tile_start + 20])
+
+    def test_visible_product_has_no_card_hidden_class(self):
+        r = self._get()
+        content = r.content.decode()
+        tile_start = content.find(f'id="prod-{self.visible.pk}"')
+        self.assertNotIn('card-hidden', content[tile_start - 50:tile_start + 20])
+
+    def test_tiles_link_to_product_detail(self):
+        r = self._get()
+        self.assertContains(r, f'/mobile2/products/{self.visible.pk}/')
+
+    def test_toggle_hidden_button_present(self):
+        r = self._get()
+        self.assertContains(r, f'/mobile/products/{self.visible.pk}/toggle-hidden/')
+
+    def test_add_product_link_present(self):
+        r = self._get()
+        self.assertContains(r, f'/mobile2/categories/{self.category.pk}/products/add/')
+
+
 class Mobile2ProductAddTest(TestCase):
     """Тест логики разбивки товаров в mobile2."""
 
