@@ -230,7 +230,8 @@ def mobile_product_toggle_category(request, pk, category_id):
 
 @staff_member_required
 def mobile2_home(request):
-    categories = Category.objects.all().order_by('name')
+    from django.db.models import Count
+    categories = Category.objects.annotate(product_count=Count('products')).order_by('name')
     return render(request, 'mobile2/home.html', {
         'categories': categories,
         'public_base': PUBLIC_BASE,

@@ -26,10 +26,12 @@
             <button class="toggle-btn" data-url="{% url 'mobile_category_toggle_hidden' cat.id %}" data-id="cat-{{ cat.id }}" onclick="toggleHidden(this)">
                 {% if cat.is_hidden %}Показать{% else %}Скрыть{% endif %}
             </button>
+            {% if cat.product_count == 0 %}
             <form method="post" action="{% url 'mobile2_category_delete' cat.id %}" style="margin:0;">
                 {% csrf_token %}
                 <button type="submit" class="btn-delete" onclick="return confirm('Удалить категорию «{{ cat.name }}»? Это действие необратимо.')">Удалить</button>
             </form>
+            {% endif %}
         </div>
     </div>
     {% endfor %}

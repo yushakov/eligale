@@ -329,10 +329,17 @@ class Mobile2CategoryDeleteTest(TestCase):
         r = self.client.get(f'/mobile2/categories/{self.category.pk}/delete/')
         self.assertEqual(r.status_code, 405)
 
-    def test_delete_button_visible_on_home(self):
+    def test_delete_button_visible_for_empty_category(self):
         self.client.force_login(self.staff)
         r = self.client.get('/mobile2/')
         self.assertContains(r, f'/mobile2/categories/{self.category.pk}/delete/')
+
+    def test_delete_button_hidden_when_category_has_products(self):
+        product = Product.objects.create(name='Кольцо')
+        product.categories.add(self.category)
+        self.client.force_login(self.staff)
+        r = self.client.get('/mobile2/')
+        self.assertNotContains(r, f'/mobile2/categories/{self.category.pk}/delete/')
 
 
 class Mobile2ProductDeleteTest(TestCase):
