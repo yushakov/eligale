@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
@@ -199,12 +200,20 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = category.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    textAlign = TextAlign.Center,
-                    color = BrownDark
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = category.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        textAlign = TextAlign.Center,
+                        color = BrownDark
+                    )
+                    Text(
+                        text = "товаров: ${category.product_count}",
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
+                        color = BrownDark.copy(alpha = 0.6f)
+                    )
+                }
             }
     }
 }

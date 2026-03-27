@@ -12,13 +12,17 @@ def _public_url(key):
 
 class CategorySerializer(serializers.ModelSerializer):
     cover_url = serializers.SerializerMethodField()
+    product_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'cover_url']
+        fields = ['id', 'name', 'cover_url', 'product_count']
 
     def get_cover_url(self, obj):
         return _public_url(obj.cover_key)
+
+    def get_product_count(self, obj):
+        return obj.products.filter(is_hidden=False).count()
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -34,13 +38,17 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     cover_url = serializers.SerializerMethodField()
+    image_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'cover_url', 'created_at']
+        fields = ['id', 'name', 'cover_url', 'created_at', 'image_count']
 
     def get_cover_url(self, obj):
         return _public_url(obj.cover_key)
+
+    def get_image_count(self, obj):
+        return obj.images.count()
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

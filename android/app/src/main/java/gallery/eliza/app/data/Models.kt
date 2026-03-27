@@ -3,14 +3,16 @@ package gallery.eliza.app.data
 data class Category(
     val id: Int,
     val name: String,
-    val cover_url: String?
+    val cover_url: String?,
+    val product_count: Int = 0
 )
 
 data class Product(
     val id: Int,
     val name: String,
     val cover_url: String?,
-    val created_at: String
+    val created_at: String,
+    val image_count: Int = 0
 )
 
 data class ProductImage(
