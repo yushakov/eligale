@@ -29,8 +29,11 @@ fun CategoryScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var showAuth by remember { mutableStateOf(false) }
     var showAccount by remember { mutableStateOf(false) }
+    var retryKey by remember { mutableStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(retryKey) {
+        loading = true
+        error = null
         try {
             categories = Api.service.getCategories()
         } catch (e: Exception) {
@@ -83,7 +86,16 @@ fun CategoryScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 loading -> {}
-                error != null -> Text("Ошибка: $error", Modifier.align(Alignment.Center))
+                error != null -> Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Не удалось загрузить данные")
+                    Button(onClick = { retryKey++ }) {
+                        Text("Переподключиться")
+                    }
+                }
                 else -> LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(8.dp),

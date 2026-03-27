@@ -45,8 +45,11 @@ fun ProductDetailScreen(
     var commentText by remember { mutableStateOf("") }
     var sendingComment by remember { mutableStateOf(false) }
     var fullscreenUrl by remember { mutableStateOf<String?>(null) }
+    var retryKey by remember { mutableStateOf(0) }
 
-    LaunchedEffect(productId) {
+    LaunchedEffect(productId, retryKey) {
+        loading = true
+        error = null
         try {
             product = Api.service.getProduct(productId)
             comments = Api.service.getComments(productId)
@@ -83,7 +86,16 @@ fun ProductDetailScreen(
             Box(Modifier.padding(padding).fillMaxSize()) {
                 when {
                     loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                    error != null -> Text("Ошибка: $error", Modifier.align(Alignment.Center))
+                    error != null -> Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text("Не удалось загрузить данные")
+                        Button(onClick = { retryKey++ }) {
+                            Text("Переподключиться")
+                        }
+                    }
                     product != null -> {
                         val images = product!!.images.ifEmpty {
                             product!!.cover_url?.let {

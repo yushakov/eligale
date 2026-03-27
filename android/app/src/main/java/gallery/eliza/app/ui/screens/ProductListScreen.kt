@@ -27,8 +27,11 @@ fun ProductListScreen(
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var retryKey by remember { mutableStateOf(0) }
 
-    LaunchedEffect(categoryId) {
+    LaunchedEffect(categoryId, retryKey) {
+        loading = true
+        error = null
         try {
             products = Api.service.getProducts(categoryId)
         } catch (e: Exception) {
@@ -53,7 +56,16 @@ fun ProductListScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                error != null -> Text("Ошибка: $error", Modifier.align(Alignment.Center))
+                error != null -> Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Не удалось загрузить данные")
+                    Button(onClick = { retryKey++ }) {
+                        Text("Переподключиться")
+                    }
+                }
                 products.isEmpty() -> Text("Нет товаров", Modifier.align(Alignment.Center))
                 else -> LazyColumn(
                     contentPadding = PaddingValues(8.dp),
