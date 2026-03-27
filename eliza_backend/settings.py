@@ -143,12 +143,10 @@ AUTH_USER_MODEL = 'users.User'
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
 ANYMAIL = {
-    'AMAZON_SES_CLIENT_PARAMS': {
-        'aws_access_key_id': os.getenv('AWS_SES_ACCESS_KEY_ID'),
-        'aws_secret_access_key': os.getenv('AWS_SES_SECRET_ACCESS_KEY'),
-        'region_name': os.getenv('AWS_SES_REGION', 'eu-west-2'),
-    }
+    'RESEND_API_KEY': os.getenv('RESENDCOM_API_KEY'),
 }
+
+DEFAULT_FROM_EMAIL = 'noreply@otp.eliza.gallery'
 
 LOGGING = {
     'version': 1,

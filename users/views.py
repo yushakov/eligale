@@ -45,7 +45,7 @@ def request_code(request):
     send_mail(
         subject='Ваш код подтверждения — Eliza Gallery',
         message=f'Ваш код: {code}\n\nКод действителен {CODE_TTL_MINUTES} минут.',
-        from_email='noreply@eliza.gallery',
+        from_email='noreply@otp.eliza.gallery',
         recipient_list=[email],
         fail_silently=False,
     )
