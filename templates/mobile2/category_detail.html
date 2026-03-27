@@ -4,28 +4,75 @@
 {% block back %}<a href="{% url 'mobile2_home' %}">←</a>{% endblock %}
 
 {% block content %}
+<style>
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    margin-top: 12px;
+}
+.prod-tile {
+    position: relative;
+    aspect-ratio: 1;
+    background: #eee;
+}
+.prod-tile.card-hidden {
+    opacity: 0.4;
+}
+.prod-tile a {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.prod-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.prod-tile .no-img {
+    width: 100%;
+    height: 100%;
+    background: #ddd;
+}
+.prod-toggle {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background: rgba(0,0,0,0.45);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 2px 5px;
+    cursor: pointer;
+    line-height: 1.4;
+    z-index: 1;
+}
+</style>
+
 <a href="{% url 'mobile2_product_add' category.id %}" class="btn">+ Добавить товар</a>
 
 {% if products %}
+    <div class="products-grid">
     {% for product in products %}
-    <div class="card{% if product.is_hidden %} card-hidden{% endif %}" id="prod-{{ product.id }}">
-        <a href="{% url 'mobile2_product_detail' product.id %}">
-            {% if product.cover_key %}
-            <img class="card-img" src="{{ public_base }}/{{ product.cover_key }}" alt="{{ product.name }}">
-            {% else %}
-            <div style="height:80px;background:#eee;"></div>
-            {% endif %}
-            <div class="card-body">
-                <div class="card-title">{{ product.name }}</div>
-            </div>
-        </a>
-        <div class="card-footer">
-            <button class="toggle-btn" data-url="{% url 'mobile_product_toggle_hidden' product.id %}" data-id="prod-{{ product.id }}" onclick="toggleHidden(this)">
+        <div class="prod-tile{% if product.is_hidden %} card-hidden{% endif %}" id="prod-{{ product.id }}">
+            <a href="{% url 'mobile2_product_detail' product.id %}">
+                {% if product.cover_key %}
+                <img src="{{ public_base }}/{{ product.cover_key }}" alt="">
+                {% else %}
+                <div class="no-img"></div>
+                {% endif %}
+            </a>
+            <button class="prod-toggle toggle-btn"
+                    data-url="{% url 'mobile_product_toggle_hidden' product.id %}"
+                    data-id="prod-{{ product.id }}"
+                    onclick="toggleHidden(this)">
                 {% if product.is_hidden %}Показать{% else %}Скрыть{% endif %}
             </button>
         </div>
-    </div>
     {% endfor %}
+    </div>
 {% else %}
     <div class="empty">Нет товаров</div>
 {% endif %}
