@@ -39,6 +39,8 @@
 
 {% block scripts %}
 <script>
+document.getElementById('name').value = Math.random().toString(36).slice(2, 10);
+
 const uploadedKeys = [];
 
 async function handlePhotos(input) {
