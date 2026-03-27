@@ -251,8 +251,9 @@ def mobile2_category_add(request):
 
 @staff_member_required
 def mobile2_category_detail(request, pk):
+    from django.db.models import Count
     category = get_object_or_404(Category, pk=pk)
-    products = category.products.all().order_by('-created_at')
+    products = category.products.annotate(image_count=Count('images')).order_by('-created_at')
     return render(request, 'mobile2/category_detail.html', {
         'category': category,
         'products': products,

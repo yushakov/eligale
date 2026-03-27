@@ -215,6 +215,15 @@ class Mobile2CategoryDetailTest(TestCase):
         r = self._get()
         self.assertContains(r, f'/mobile2/categories/{self.category.pk}/products/add/')
 
+    def test_photo_count_shown_on_tile(self):
+        image = ProductImage.objects.create(product=self.visible, image_key='img/photo.jpg')
+        r = self._get()
+        self.assertContains(r, '1 фото')
+
+    def test_zero_photo_count_shown_on_tile(self):
+        r = self._get()
+        self.assertContains(r, '0 фото')
+
 
 class Mobile2ProductAddTest(TestCase):
     """Тест логики разбивки товаров в mobile2."""
@@ -328,6 +337,18 @@ class Mobile2CategoryDeleteTest(TestCase):
         self.client.force_login(self.staff)
         r = self.client.get(f'/mobile2/categories/{self.category.pk}/delete/')
         self.assertEqual(r.status_code, 405)
+
+    def test_product_count_shown_on_home(self):
+        self.client.force_login(self.staff)
+        r = self.client.get('/mobile2/')
+        self.assertContains(r, 'товаров: 0')
+
+    def test_product_count_updates_with_products(self):
+        product = Product.objects.create(name='Кольцо')
+        product.categories.add(self.category)
+        self.client.force_login(self.staff)
+        r = self.client.get('/mobile2/')
+        self.assertContains(r, 'товаров: 1')
 
     def test_delete_button_visible_for_empty_category(self):
         self.client.force_login(self.staff)
