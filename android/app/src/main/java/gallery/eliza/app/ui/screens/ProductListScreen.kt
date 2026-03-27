@@ -18,9 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Product
 import gallery.eliza.app.ui.theme.BrownDark
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +36,8 @@ fun ProductListScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var retryKey by remember { mutableStateOf(0) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(categoryId, retryKey) {
         loading = true
@@ -73,12 +77,28 @@ fun ProductListScreen(
                     }
                 }
                 products.isEmpty() -> Text("Нет товаров", Modifier.align(Alignment.Center))
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                else -> PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        scope.launch {
+                            isRefreshing = true
+                            try {
+                                val newList = Api.service.getProducts(categoryId)
+                                val existingIds = products.map { it.id }.toSet()
+                                val toAdd = newList.filter { it.id !in existingIds }
+                                if (toAdd.isNotEmpty()) products = products + toAdd
+                            } catch (_: Exception) { }
+                            isRefreshing = false
+                        }
+                    }
                 ) {
-                    items(products) { product ->
-                        ProductCard(product, onClick = { onProductClick(product.id) })
+                    LazyColumn(
+                        contentPadding = PaddingValues(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(products) { product ->
+                            ProductCard(product, onClick = { onProductClick(product.id) })
+                        }
                     }
                 }
             }

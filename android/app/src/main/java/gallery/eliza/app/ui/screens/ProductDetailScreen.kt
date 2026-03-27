@@ -29,10 +29,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Comment
 import gallery.eliza.app.data.ProductDetail
 import gallery.eliza.app.ui.theme.BrownDark
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -51,6 +53,8 @@ fun ProductDetailScreen(
     var sendingComment by remember { mutableStateOf(false) }
     var fullscreenUrl by remember { mutableStateOf<String?>(null) }
     var retryKey by remember { mutableStateOf(0) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(productId, retryKey) {
         loading = true
@@ -108,6 +112,24 @@ fun ProductDetailScreen(
                             } ?: emptyList()
                         }
 
+                        PullToRefreshBox(
+                            isRefreshing = isRefreshing,
+                            onRefresh = {
+                                scope.launch {
+                                    isRefreshing = true
+                                    try {
+                                        val newProduct = Api.service.getProduct(productId)
+                                        val newComments = Api.service.getComments(productId)
+                                        product = newProduct
+                                        val existingCommentIds = comments.map { it.id }.toSet()
+                                        val toAdd = newComments.filter { it.id !in existingCommentIds }
+                                        if (toAdd.isNotEmpty()) comments = comments + toAdd
+                                    } catch (_: Exception) { }
+                                    isRefreshing = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                         LazyColumn(Modifier.fillMaxSize()) {
                             // Галерея
                             item {
@@ -222,6 +244,7 @@ fun ProductDetailScreen(
                                 }
                             }
                         }
+                        } // PullToRefreshBox
 
                         // Отправка комментария
                         if (sendingComment && token != null) {

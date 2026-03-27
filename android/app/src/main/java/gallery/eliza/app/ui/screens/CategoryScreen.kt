@@ -15,12 +15,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
 import gallery.eliza.app.ui.theme.BrownDark
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +39,8 @@ fun CategoryScreen(
     var showAuth by remember { mutableStateOf(false) }
     var showAccount by remember { mutableStateOf(false) }
     var retryKey by remember { mutableStateOf(0) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(retryKey) {
         loading = true
@@ -102,14 +107,30 @@ fun CategoryScreen(
                         Text("Переподключиться")
                     }
                 }
-                else -> LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                else -> PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        scope.launch {
+                            isRefreshing = true
+                            try {
+                                val newList = Api.service.getCategories()
+                                val existingIds = categories.map { it.id }.toSet()
+                                val toAdd = newList.filter { it.id !in existingIds }
+                                if (toAdd.isNotEmpty()) categories = categories + toAdd
+                            } catch (_: Exception) { }
+                            isRefreshing = false
+                        }
+                    }
                 ) {
-                    items(categories) { category ->
-                        CategoryCard(category, onClick = { onCategoryClick(category.id, category.name) })
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(categories) { category ->
+                            CategoryCard(category, onClick = { onCategoryClick(category.id, category.name) })
+                        }
                     }
                 }
             }
@@ -119,15 +140,16 @@ fun CategoryScreen(
 
 @Composable
 private fun CategoryCard(category: Category, onClick: () -> Unit) {
-    BoxWithConstraints(
+    // Ширина ячейки = (ширина экрана - 2×contentPadding - horizontalSpacing) / 2
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val circleSize = (screenWidth - 8.dp * 2 - 8.dp) / 2
+    val labelTopPadding = circleSize * 0.75f
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        val circleSize = maxWidth
-        val labelTopPadding = circleSize * 0.75f
-
-        Box(modifier = Modifier.fillMaxWidth()) {
             // Круглая обложка
             Box(
                 modifier = Modifier
@@ -184,6 +206,5 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                     color = BrownDark
                 )
             }
-        }
     }
 }
