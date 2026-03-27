@@ -299,6 +299,42 @@ class Mobile2ProductAddTest(TestCase):
             self.assertIn(self.category, p.categories.all())
 
 
+class Mobile2CategoryDeleteTest(TestCase):
+    """Тест удаления категории через mobile2."""
+
+    def setUp(self):
+        self.client = Client()
+        self.staff = User.objects.create_superuser(email='admin@example.com', password='pass')
+        self.category = Category.objects.create(name='Украшения')
+
+    def _delete(self):
+        self.client.force_login(self.staff)
+        return self.client.post(f'/mobile2/categories/{self.category.pk}/delete/')
+
+    def test_requires_staff(self):
+        r = self.client.post(f'/mobile2/categories/{self.category.pk}/delete/')
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(Category.objects.filter(pk=self.category.pk).exists())
+
+    def test_deletes_category(self):
+        self._delete()
+        self.assertFalse(Category.objects.filter(pk=self.category.pk).exists())
+
+    def test_redirects_to_home(self):
+        r = self._delete()
+        self.assertRedirects(r, '/mobile2/')
+
+    def test_get_method_not_allowed(self):
+        self.client.force_login(self.staff)
+        r = self.client.get(f'/mobile2/categories/{self.category.pk}/delete/')
+        self.assertEqual(r.status_code, 405)
+
+    def test_delete_button_visible_on_home(self):
+        self.client.force_login(self.staff)
+        r = self.client.get('/mobile2/')
+        self.assertContains(r, f'/mobile2/categories/{self.category.pk}/delete/')
+
+
 class Mobile2ProductDeleteTest(TestCase):
     """Тест удаления товара через mobile2."""
 

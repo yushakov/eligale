@@ -322,6 +322,14 @@ def mobile2_product_detail(request, pk):
 
 @staff_member_required
 @require_http_methods(['POST'])
+def mobile2_category_delete(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    category.delete()
+    return redirect('mobile2_home')
+
+
+@staff_member_required
+@require_http_methods(['POST'])
 def mobile2_product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
     category_id = product.categories.values_list('id', flat=True).first()

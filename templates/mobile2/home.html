@@ -3,6 +3,10 @@
 {% block heading %}Категории{% endblock %}
 
 {% block content %}
+<style>
+.btn-delete { background: #c0392b; color: white; border: none; border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+</style>
+
 <a href="{% url 'mobile2_category_add' %}" class="btn">+ Добавить категорию</a>
 
 {% if categories %}
@@ -18,10 +22,14 @@
                 <div class="card-title">{{ cat.name }}</div>
             </div>
         </a>
-        <div class="card-footer">
+        <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center;">
             <button class="toggle-btn" data-url="{% url 'mobile_category_toggle_hidden' cat.id %}" data-id="cat-{{ cat.id }}" onclick="toggleHidden(this)">
                 {% if cat.is_hidden %}Показать{% else %}Скрыть{% endif %}
             </button>
+            <form method="post" action="{% url 'mobile2_category_delete' cat.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-delete" onclick="return confirm('Удалить категорию «{{ cat.name }}»? Это действие необратимо.')">Удалить</button>
+            </form>
         </div>
     </div>
     {% endfor %}
