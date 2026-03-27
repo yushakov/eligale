@@ -299,6 +299,45 @@ class Mobile2ProductAddTest(TestCase):
             self.assertIn(self.category, p.categories.all())
 
 
+class Mobile2ProductDeleteTest(TestCase):
+    """Тест удаления товара через mobile2."""
+
+    def setUp(self):
+        self.client = Client()
+        self.staff = User.objects.create_superuser(email='admin@example.com', password='pass')
+        self.category = Category.objects.create(name='Украшения')
+        self.product = Product.objects.create(name='Кольцо')
+        self.product.categories.add(self.category)
+
+    def _delete(self):
+        self.client.force_login(self.staff)
+        return self.client.post(f'/mobile2/products/{self.product.pk}/delete/')
+
+    def test_requires_staff(self):
+        r = self.client.post(f'/mobile2/products/{self.product.pk}/delete/')
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(Product.objects.filter(pk=self.product.pk).exists())
+
+    def test_deletes_product(self):
+        self._delete()
+        self.assertFalse(Product.objects.filter(pk=self.product.pk).exists())
+
+    def test_redirects_to_category(self):
+        r = self._delete()
+        self.assertRedirects(r, f'/mobile2/categories/{self.category.pk}/')
+
+    def test_redirects_to_home_when_no_category(self):
+        product = Product.objects.create(name='Без категории')
+        self.client.force_login(self.staff)
+        r = self.client.post(f'/mobile2/products/{product.pk}/delete/')
+        self.assertRedirects(r, '/mobile2/')
+
+    def test_get_method_not_allowed(self):
+        self.client.force_login(self.staff)
+        r = self.client.get(f'/mobile2/products/{self.product.pk}/delete/')
+        self.assertEqual(r.status_code, 405)
+
+
 def _make_mock_s3(presign_return='https://storage.yandexcloud.net/presigned'):
     mock_client = MagicMock()
     mock_client.generate_presigned_url.return_value = presign_return

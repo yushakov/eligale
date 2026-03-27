@@ -309,13 +309,26 @@ def mobile2_product_detail(request, pk):
     images = product.images.all().order_by('id')
     all_categories = Category.objects.all().order_by('name')
     product_category_ids = set(product.categories.values_list('id', flat=True))
+    back_category = product.categories.order_by('id').first()
     return render(request, 'mobile2/product_detail.html', {
         'product': product,
         'images': images,
         'public_base': PUBLIC_BASE,
         'all_categories': all_categories,
         'product_category_ids': product_category_ids,
+        'back_category': back_category,
     })
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def mobile2_product_delete(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    category_id = product.categories.values_list('id', flat=True).first()
+    product.delete()
+    if category_id:
+        return redirect('mobile2_category_detail', pk=category_id)
+    return redirect('mobile2_home')
 
 
 @staff_member_required

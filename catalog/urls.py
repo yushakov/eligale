@@ -22,6 +22,7 @@ urlpatterns = [
     path('mobile2/categories/<int:pk>/', views.mobile2_category_detail, name='mobile2_category_detail'),
     path('mobile2/categories/<int:category_id>/products/add/', views.mobile2_product_add, name='mobile2_product_add'),
     path('mobile2/products/<int:pk>/', views.mobile2_product_detail, name='mobile2_product_detail'),
+    path('mobile2/products/<int:pk>/delete/', views.mobile2_product_delete, name='mobile2_product_delete'),
 
     path('mobile/categories/<int:pk>/toggle-hidden/', views.mobile_category_toggle_hidden, name='mobile_category_toggle_hidden'),
     path('mobile/products/<int:pk>/toggle-hidden/', views.mobile_product_toggle_hidden, name='mobile_product_toggle_hidden'),
