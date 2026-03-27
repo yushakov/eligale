@@ -275,3 +275,10 @@ class DeleteAccountTest(TestCase):
         token_key = self.token.key
         self._delete(token=token_key)
         self.assertFalse(Token.objects.filter(key=token_key).exists())
+
+    def test_staff_cannot_delete_account(self):
+        self.user.is_staff = True
+        self.user.save()
+        r = self._delete(token=self.token.key)
+        self.assertEqual(r.status_code, 403)
+        self.assertTrue(User.objects.filter(email='user@example.com').exists())

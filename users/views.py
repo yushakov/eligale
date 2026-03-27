@@ -122,5 +122,8 @@ def delete_account(request):
     except Exception:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
 
+    if user.is_staff:
+        return Response({'error': 'Staff accounts cannot be deleted via API'}, status=status.HTTP_403_FORBIDDEN)
+
     user.delete()
     return Response({'ok': True})
