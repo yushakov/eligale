@@ -16,6 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import android.app.DownloadManager
+import android.net.Uri
+import android.os.Environment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -23,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import gallery.eliza.app.data.Api
@@ -268,6 +272,8 @@ private fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
         offset = if (scale > 1f) offset + panChange else Offset.Zero
     }
 
+    val context = LocalContext.current
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -291,5 +297,26 @@ private fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
                 )
                 .transformable(state = transformState)
         )
+
+        Button(
+            onClick = {
+                val fileName = url.substringAfterLast("/").substringBefore("?")
+                    .ifBlank { "image.jpg" }
+                val request = DownloadManager.Request(Uri.parse(url))
+                    .setTitle(fileName)
+                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                val dm = context.getSystemService(DownloadManager::class.java)
+                dm.enqueue(request)
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = BrownDark.copy(alpha = 0.7f)
+            )
+        ) {
+            Text("Скачать")
+        }
     }
 }
