@@ -183,7 +183,7 @@ fun ProductDetailScreen(
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = BrownDark
                                         )
-                                        HorizontalDivider(Modifier.padding(top = 6.dp))
+                                        Spacer(Modifier.height(20.dp))
                                     }
                                 }
                             }
@@ -199,7 +199,8 @@ fun ProductDetailScreen(
                                         onValueChange = { commentText = it },
                                         placeholder = { Text("Написать комментарий...") },
                                         modifier = Modifier.weight(1f),
-                                        maxLines = 3
+                                        maxLines = 3,
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Button(

@@ -112,7 +112,7 @@ private fun ProductCard(product: Product, onClick: () -> Unit) {
                         .background(
                             brush = Brush.radialGradient(
                                 colorStops = arrayOf(
-                                    0.65f to Color.Transparent,
+                                    0.70f to Color.Transparent,
                                     1.0f to Color.White
                                 )
                             )

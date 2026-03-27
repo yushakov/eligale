@@ -150,7 +150,7 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                             .background(
                                 brush = Brush.radialGradient(
                                     colorStops = arrayOf(
-                                        0.65f to Color.Transparent,
+                                        0.70f to Color.Transparent,
                                         1.0f to Color.White
                                     )
                                 )
@@ -167,10 +167,12 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
             }
 
             // Название: полупрозрачный прямоугольник, начинается в нижней четверти круга
+            // minHeight = 25% от диаметра, чтобы всегда закрывать нижнюю часть круга
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = labelTopPadding)
+                    .heightIn(min = circleSize * 0.25f)
                     .background(Color.White.copy(alpha = 0.7f))
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
