@@ -190,7 +190,30 @@ class Mobile2ProductAddTest(TestCase):
         self.assertEqual(Product.objects.count(), 1)
         p = Product.objects.first()
         self.assertEqual(p.cover_key, 'k1.jpg')
-        self.assertEqual(ProductImage.objects.filter(product=p).count(), 2)
+        # Все три фото в галерее, включая обложку
+        self.assertEqual(ProductImage.objects.filter(product=p).count(), 3)
+
+    def test_single_image_is_in_gallery(self):
+        self._post('Кольцо', ['only.jpg'])
+        p = Product.objects.first()
+        self.assertEqual(p.cover_key, 'only.jpg')
+        images = list(ProductImage.objects.filter(product=p).values_list('image_key', flat=True))
+        self.assertEqual(images, ['only.jpg'])
+
+    def test_cover_included_in_gallery_for_multiple_images(self):
+        self._post('Серьги', ['cover.jpg', 'extra1.jpg', 'extra2.jpg'])
+        p = Product.objects.first()
+        keys = list(ProductImage.objects.filter(product=p).values_list('image_key', flat=True))
+        self.assertIn('cover.jpg', keys)
+        self.assertIn('extra1.jpg', keys)
+        self.assertIn('extra2.jpg', keys)
+
+    def test_split_each_product_has_one_gallery_image(self):
+        self._post('Ваза', ['a.jpg', 'b.jpg', 'c.jpg'], split=True)
+        for product in Product.objects.all():
+            images = ProductImage.objects.filter(product=product)
+            self.assertEqual(images.count(), 1)
+            self.assertEqual(images.first().image_key, product.cover_key)
 
     def test_split_creates_one_product_per_image(self):
         self._post('Кольцо', ['k1.jpg', 'k2.jpg', 'k3.jpg'], split=True)

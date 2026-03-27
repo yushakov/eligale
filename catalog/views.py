@@ -278,8 +278,7 @@ def mobile2_product_add(request, category_id):
             return redirect('mobile2_product_detail', pk=product.pk)
 
         if split and len(image_keys) > 1:
-            # Разбиваем на отдельные товары
-            first_product = None
+            # Разбиваем на отдельные товары: обложка = фото = одно изображение
             for i, key in enumerate(image_keys, start=1):
                 product = Product.objects.create(
                     name=f'{name} {i}',
@@ -287,18 +286,17 @@ def mobile2_product_add(request, category_id):
                     cover_key=key,
                 )
                 product.categories.add(category)
-                if first_product is None:
-                    first_product = product
+                ProductImage.objects.create(product=product, image_key=key)
             return redirect('mobile2_category_detail', pk=category_id)
         else:
-            # Один товар: первая фото — обложка, остальные — галерея
+            # Один товар: первая фото — обложка, все фото — галерея
             product = Product.objects.create(
                 name=name,
                 description=description,
                 cover_key=image_keys[0],
             )
             product.categories.add(category)
-            for key in image_keys[1:]:
+            for key in image_keys:
                 ProductImage.objects.create(product=product, image_key=key)
             return redirect('mobile2_product_detail', pk=product.pk)
 
