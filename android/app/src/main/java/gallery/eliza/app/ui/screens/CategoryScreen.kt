@@ -1,20 +1,26 @@
 package gallery.eliza.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
+import gallery.eliza.app.ui.theme.BrownDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,27 +119,67 @@ fun CategoryScreen(
 
 @Composable
 private fun CategoryCard(category: Category, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clickable(onClick = onClick)
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
-        Box(Modifier.fillMaxSize()) {
-            if (category.cover_url != null) {
-                AsyncImage(
-                    model = category.cover_url,
-                    contentDescription = category.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+        val circleSize = maxWidth
+        val labelTopPadding = circleSize * 0.75f
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Круглая обложка
+            Box(
+                modifier = Modifier
+                    .size(circleSize)
+                    .align(Alignment.TopCenter)
+            ) {
+                if (category.cover_url != null) {
+                    AsyncImage(
+                        model = category.cover_url,
+                        contentDescription = category.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                    // Мягкие края: радиальный градиент поверх
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colorStops = arrayOf(
+                                        0.65f to Color.Transparent,
+                                        1.0f to Color.White
+                                    )
+                                )
+                            )
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                }
             }
-            Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+
+            // Название: полупрозрачный прямоугольник, начинается в нижней четверти круга
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = labelTopPadding)
+                    .background(Color.White.copy(alpha = 0.7f))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = category.name,
                     style = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(8.dp)
+                    color = BrownDark
                 )
             }
         }

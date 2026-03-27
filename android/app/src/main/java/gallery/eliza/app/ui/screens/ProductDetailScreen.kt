@@ -28,6 +28,7 @@ import coil.compose.AsyncImage
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Comment
 import gallery.eliza.app.data.ProductDetail
+import gallery.eliza.app.ui.theme.BrownDark
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -171,8 +172,17 @@ fun ProductDetailScreen(
                             } else {
                                 items(comments) { comment ->
                                     Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                        Text(comment.author, style = MaterialTheme.typography.labelMedium)
-                                        Text(comment.text, style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            comment.author,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = Color.Black,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            comment.text,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = BrownDark
+                                        )
                                         HorizontalDivider(Modifier.padding(top = 6.dp))
                                     }
                                 }
