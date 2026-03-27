@@ -39,6 +39,27 @@ class CategoryListAPITest(TestCase):
         cat = next(c for c in r.json() if c['name'] == 'Видимая')
         self.assertIsNone(cat['cover_url'])
 
+    def test_product_count_zero_when_no_products(self):
+        r = self.client.get('/api/categories/')
+        cat = next(c for c in r.json() if c['name'] == 'Видимая')
+        self.assertEqual(cat['product_count'], 0)
+
+    def test_product_count_includes_visible_products(self):
+        product = Product.objects.create(name='Кольцо')
+        product.categories.add(self.visible)
+        r = self.client.get('/api/categories/')
+        cat = next(c for c in r.json() if c['name'] == 'Видимая')
+        self.assertEqual(cat['product_count'], 1)
+
+    def test_product_count_excludes_hidden_products(self):
+        visible = Product.objects.create(name='Кольцо')
+        visible.categories.add(self.visible)
+        hidden = Product.objects.create(name='Скрытое', is_hidden=True)
+        hidden.categories.add(self.visible)
+        r = self.client.get('/api/categories/')
+        cat = next(c for c in r.json() if c['name'] == 'Видимая')
+        self.assertEqual(cat['product_count'], 1)
+
 
 class ProductListAPITest(TestCase):
     def setUp(self):
@@ -63,6 +84,18 @@ class ProductListAPITest(TestCase):
     def test_404_for_missing_category(self):
         r = self.client.get('/api/categories/99999/products/')
         self.assertEqual(r.status_code, 404)
+
+    def test_image_count_zero_when_no_images(self):
+        r = self.client.get(f'/api/categories/{self.category.pk}/products/')
+        product = next(p for p in r.json() if p['name'] == 'Кольцо')
+        self.assertEqual(product['image_count'], 0)
+
+    def test_image_count_reflects_actual_images(self):
+        ProductImage.objects.create(product=self.visible, image_key='img/a.jpg')
+        ProductImage.objects.create(product=self.visible, image_key='img/b.jpg')
+        r = self.client.get(f'/api/categories/{self.category.pk}/products/')
+        product = next(p for p in r.json() if p['name'] == 'Кольцо')
+        self.assertEqual(product['image_count'], 2)
 
 
 class ProductDetailAPITest(TestCase):
