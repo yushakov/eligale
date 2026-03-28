@@ -1,6 +1,13 @@
 package gallery.eliza.app.ui.screens
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,21 +18,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import coil.compose.AsyncImage
 import gallery.eliza.app.data.*
 import gallery.eliza.app.ui.theme.BrownDark
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.TimeUnit
 
 private val BubbleUser = Color(0xFFF5EDE4)
 private val BubbleStaff = Color(0xFFEAE0D5)
@@ -36,6 +54,7 @@ private val BubbleStaff = Color(0xFFEAE0D5)
  * Для staff: staffUserId = id пользователя, token — токен сотрудника.
  */
 private val productLinkRegex = Regex("""\[product:(\d+):(\d+)\]""")
+private val imageLinkRegex = Regex("""\[image:(https?://[^\]]+)\]""")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +77,27 @@ fun ChatScreen(
     var hasHistory by remember { mutableStateOf(false) }   // есть ли что грузить выше
     var loadingHistory by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        sending = true
+        scope.launch {
+            try {
+                val imageText = uploadImageAndGetMessage(context, uri, token)
+                if (imageText != null) {
+                    val msg = if (staffUserId == null) {
+                        Api.service.sendChatMessage("Token $token", mapOf("text" to imageText))
+                    } else {
+                        Api.service.sendStaffChatMessage("Token $token", staffUserId, mapOf("text" to imageText))
+                    }
+                    dao.insertAll(listOf(msg.toEntity(chatUserId)))
+                    messages = dao.getAll(chatUserId).map { it.toModel() }
+                    listState.animateScrollToItem(messages.size - 1)
+                }
+            } catch (_: Exception) { }
+            sending = false
+        }
+    }
 
     // Перезапускаем загрузку при каждом RESUME (в т.ч. после пробуждения телефона)
     var resumeKey by remember { mutableStateOf(0) }
@@ -145,6 +185,12 @@ fun ChatScreen(
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                IconButton(
+                    onClick = { imagePicker.launch("image/*") },
+                    enabled = !sending,
+                ) {
+                    Icon(Icons.Filled.Image, contentDescription = "Картинка", tint = BrownDark)
+                }
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = it },
@@ -252,7 +298,10 @@ private fun MessageBubble(
     }
 
     val productMatch = productLinkRegex.find(msg.text)
-    val displayText = if (productMatch != null) msg.text.replace(productMatch.value, "").trimEnd() else msg.text
+    val imageMatch = imageLinkRegex.find(msg.text)
+    var displayText = msg.text
+    if (productMatch != null) displayText = displayText.replace(productMatch.value, "").trimEnd()
+    if (imageMatch != null) displayText = displayText.replace(imageMatch.value, "").trimEnd()
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -265,7 +314,20 @@ private fun MessageBubble(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Column {
-                Text(displayText, color = BrownDark, fontSize = 15.sp)
+                if (imageMatch != null) {
+                    AsyncImage(
+                        model = imageMatch.groupValues[1],
+                        contentDescription = null,
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 240.dp)
+                    )
+                    if (displayText.isNotBlank()) Spacer(Modifier.height(4.dp))
+                }
+                if (displayText.isNotBlank()) {
+                    Text(displayText, color = BrownDark, fontSize = 15.sp)
+                }
                 if (productMatch != null && onOpenProduct != null) {
                     val productId = productMatch.groupValues[1].toInt()
                     val imageIndex = productMatch.groupValues[2].toInt()
@@ -286,6 +348,49 @@ private fun MessageBubble(
         }
     }
 }
+
+private val uploadClient = OkHttpClient.Builder()
+    .connectTimeout(15, TimeUnit.SECONDS)
+    .writeTimeout(60, TimeUnit.SECONDS)
+    .readTimeout(15, TimeUnit.SECONDS)
+    .build()
+
+/**
+ * Сжимает изображение, загружает в Яндекс через presign и возвращает текст сообщения [image:url].
+ * Возвращает null при ошибке.
+ */
+private suspend fun uploadImageAndGetMessage(context: Context, uri: Uri, token: String): String? =
+    withContext(Dispatchers.IO) {
+        try {
+            // Сжимаем до JPEG 85%
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
+            } else {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+            }
+            val out = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            val bytes = out.toByteArray()
+
+            // Presign
+            val presign = Api.service.chatMediaPresign("Token $token", mapOf("filename" to "image.jpg"))
+
+            // PUT напрямую в Яндекс
+            val body = bytes.toRequestBody("image/jpeg".toMediaType())
+            val request = Request.Builder()
+                .url(presign.upload_url)
+                .put(body)
+                .header("Content-Type", "image/jpeg")
+                .build()
+            val response = uploadClient.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext null
+
+            "[image:${presign.public_url}]"
+        } catch (_: Exception) {
+            null
+        }
+    }
 
 private suspend fun markRead(
     context: Context,

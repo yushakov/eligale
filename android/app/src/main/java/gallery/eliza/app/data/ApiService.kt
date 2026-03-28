@@ -64,6 +64,14 @@ interface ApiService {
         @Path("id") commentId: Int,
     )
 
+    // ── Медиа в чате ──────────────────────────────────────────────────────────
+
+    @POST("api/chat/media/presign/")
+    suspend fun chatMediaPresign(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, String>,
+    ): PresignResponse
+
     // ── Чат (пользователь) ────────────────────────────────────────────────────
 
     @GET("api/chat/")

@@ -1,3 +1,9 @@
+import mimetypes
+import uuid
+
+import boto3
+from botocore.config import Config
+from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -51,6 +57,49 @@ def _fetch_messages(qs, after, before, limit):
     else:
         qs = list(reversed(list(qs.order_by('-created_at')[:limit])))
     return qs
+
+
+# ── Медиа в чате ──────────────────────────────────────────────────────────────
+
+@api_view(['POST'])
+def chat_media_presign(request):
+    """
+    Presign-URL для загрузки медиафайла в публичный бакет (папка chat/).
+    Доступен любому авторизованному пользователю (и user, и staff).
+    Body: { "filename": "photo.jpg" }
+    Response: { "upload_url": "...", "public_url": "..." }
+    """
+    user, err = _require_auth(request)
+    if err:
+        return err
+
+    filename = request.data.get('filename', 'image.jpg')
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'jpg'
+    key = f"chat/{uuid.uuid4().hex}.{ext}"
+
+    content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+    session = boto3.session.Session()
+    s3 = session.client(
+        service_name='s3',
+        endpoint_url='https://storage.yandexcloud.net',
+        aws_access_key_id=settings.YA_PUBLIC_UPLOADER_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.YA_PUBLIC_UPLOADER_SECRET_ACCESS_KEY,
+        region_name=settings.YA_PUBLIC_UPLOADER_REGION_NAME,
+        config=Config(signature_version='s3v4'),
+    )
+    upload_url = s3.generate_presigned_url(
+        ClientMethod='put_object',
+        Params={
+            'Bucket': settings.YA_PUBLIC_UPLOADER_BUCKET_NAME,
+            'Key': key,
+            'ContentType': content_type,
+        },
+        ExpiresIn=300,
+        HttpMethod='PUT',
+    )
+    public_url = f"{settings.YA_PUBLIC_UPLOADER_PUBLIC_BASE_URL.rstrip('/')}/{key}"
+    return Response({'upload_url': upload_url, 'public_url': public_url})
 
 
 # ── Пользовательские эндпоинты ────────────────────────────────────────────────

@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Медиа
+    path('api/chat/media/presign/', views.chat_media_presign, name='chat_media_presign'),
+
     # Пользователь
     path('api/chat/', views.chat_info, name='chat_info'),
     path('api/chat/messages/', views.chat_messages, name='chat_messages'),
