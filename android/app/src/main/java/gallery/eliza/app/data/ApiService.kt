@@ -41,6 +41,65 @@ interface ApiService {
 
     @DELETE("api/auth/delete-account/")
     suspend fun deleteAccount(@Header("Authorization") token: String)
+
+    // ── Чат (пользователь) ────────────────────────────────────────────────────
+
+    @GET("api/chat/")
+    suspend fun getChatInfo(@Header("Authorization") token: String): ChatInfo
+
+    @GET("api/chat/messages/")
+    suspend fun getChatMessages(
+        @Header("Authorization") token: String,
+        @Query("after") after: Int? = null,
+        @Query("before") before: Int? = null,
+        @Query("limit") limit: Int = 50,
+    ): List<ChatMessage>
+
+    @POST("api/chat/messages/send/")
+    suspend fun sendChatMessage(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, String>,
+    ): ChatMessage
+
+    @POST("api/chat/mark-read/")
+    suspend fun markChatRead(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, Int>,
+    )
+
+    @GET("api/chat/unread/")
+    suspend fun getChatUnread(@Header("Authorization") token: String): UnreadCount
+
+    // ── Чат (staff) ───────────────────────────────────────────────────────────
+
+    @GET("api/chats/")
+    suspend fun getStaffChatList(@Header("Authorization") token: String): List<ChatListItem>
+
+    @GET("api/chats/unread/")
+    suspend fun getStaffUnread(@Header("Authorization") token: String): UnreadCount
+
+    @GET("api/chats/{userId}/messages/")
+    suspend fun getStaffChatMessages(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Int,
+        @Query("after") after: Int? = null,
+        @Query("before") before: Int? = null,
+        @Query("limit") limit: Int = 50,
+    ): List<ChatMessage>
+
+    @POST("api/chats/{userId}/messages/send/")
+    suspend fun sendStaffChatMessage(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Int,
+        @Body body: Map<String, String>,
+    ): ChatMessage
+
+    @POST("api/chats/{userId}/mark-read/")
+    suspend fun markStaffChatRead(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: Int,
+        @Body body: Map<String, Int>,
+    )
 }
 
 object Api {

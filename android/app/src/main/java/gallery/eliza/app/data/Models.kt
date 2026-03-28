@@ -32,12 +32,38 @@ data class ProductDetail(
 
 data class Comment(
     val id: Int,
+    val user_id: Int,
+    val user_email: String,
     val author: String,
     val text: String,
     val created_at: String
 )
 
-data class UserProfile(val email: String, val display_name: String)
+data class UserProfile(val email: String, val display_name: String, val is_staff: Boolean = false)
+
+data class ChatMessage(
+    val id: Int,
+    val sender_email: String,
+    val is_staff: Boolean,
+    val text: String,
+    val is_read: Boolean,
+    val created_at: String,
+)
+
+data class ChatInfo(val chat_id: Int, val last_message_id: Int?)
+
+data class UnreadCount(val unread: Int)
+
+data class ChatListItem(
+    val id: Int,
+    val user_email: String,
+    val user_display_name: String?,
+    val unread_count: Int,
+    val last_message: ChatLastMessage?,
+    val last_message_at: String?,
+)
+
+data class ChatLastMessage(val text: String, val created_at: String)
 
 data class RequestCodeBody(val email: String)
 data class VerifyCodeBody(val email: String, val code: String)

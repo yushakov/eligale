@@ -24,6 +24,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
 import gallery.eliza.app.ui.theme.BrownDark
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +33,10 @@ fun CategoryScreen(
     onCategoryClick: (Int, String) -> Unit,
     onReady: () -> Unit,
     token: String?,
-    onTokenChange: (String?) -> Unit
+    onTokenChange: (String?) -> Unit,
+    onChatClick: () -> Unit,
+    onChatsClick: () -> Unit,
+    isStaff: Boolean,
 ) {
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -41,6 +45,7 @@ fun CategoryScreen(
     var showAccount by remember { mutableStateOf(false) }
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var unreadCount by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(retryKey) {
@@ -53,6 +58,21 @@ fun CategoryScreen(
         } finally {
             loading = false
             onReady()
+        }
+    }
+
+    // Polling счётчика непрочитанных каждые 15 сек
+    LaunchedEffect(token) {
+        if (token == null) { unreadCount = 0; return@LaunchedEffect }
+        while (true) {
+            try {
+                unreadCount = if (isStaff) {
+                    Api.service.getStaffUnread("Token $token").unread
+                } else {
+                    Api.service.getChatUnread("Token $token").unread
+                }
+            } catch (_: Exception) { }
+            delay(15_000)
         }
     }
 
@@ -86,6 +106,29 @@ fun CategoryScreen(
             TopAppBar(
                 title = { Text("Eliza Gallery") },
                 actions = {
+                    // Кнопка чата с бейджем
+                    if (token != null) {
+                        Box {
+                            TextButton(onClick = {
+                                if (isStaff) onChatsClick() else onChatClick()
+                            }) {
+                                Text(if (isStaff) "Чаты" else "Чат")
+                            }
+                            if (unreadCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-2).dp, y = 6.dp)
+                                ) {
+                                    UnreadBadge(unreadCount)
+                                }
+                            }
+                        }
+                    } else {
+                        TextButton(onClick = { showAuth = true }) {
+                            Text("Чат")
+                        }
+                    }
                     TextButton(onClick = {
                         if (token == null) showAuth = true else showAccount = true
                     }) {
@@ -141,7 +184,6 @@ fun CategoryScreen(
 
 @Composable
 private fun CategoryCard(category: Category, onClick: () -> Unit) {
-    // Ширина ячейки = (ширина экрана - 2×contentPadding - horizontalSpacing) / 2
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val circleSize = (screenWidth - 8.dp * 2 - 8.dp) / 2
     val labelTopPadding = circleSize * 0.75f
@@ -151,7 +193,6 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-            // Круглая обложка
             Box(
                 modifier = Modifier
                     .size(circleSize)
@@ -166,7 +207,6 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                             .fillMaxSize()
                             .clip(CircleShape)
                     )
-                    // Мягкие края: радиальный градиент поверх
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -189,8 +229,6 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                 }
             }
 
-            // Название: полупрозрачный прямоугольник, начинается в нижней четверти круга
-            // minHeight = 25% от диаметра, чтобы всегда закрывать нижнюю часть круга
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

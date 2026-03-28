@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,7 +44,9 @@ fun ProductDetailScreen(
     productId: Int,
     onBack: () -> Unit,
     token: String?,
-    onTokenChange: (String?) -> Unit
+    onTokenChange: (String?) -> Unit,
+    isStaff: Boolean = false,
+    onOpenChat: (userId: Int, userEmail: String) -> Unit = { _, _ -> },
 ) {
     var product by remember { mutableStateOf<ProductDetail?>(null) }
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
@@ -198,12 +202,25 @@ fun ProductDetailScreen(
                             } else {
                                 items(comments) { comment ->
                                     Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                        Text(
-                                            comment.author,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = Color.Black,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                                        )
+                                        if (isStaff) {
+                                            Text(
+                                                comment.author,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = BrownDark,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                                textDecoration = TextDecoration.Underline,
+                                                modifier = Modifier.clickable {
+                                                    onOpenChat(comment.user_id, comment.user_email)
+                                                }
+                                            )
+                                        } else {
+                                            Text(
+                                                comment.author,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = Color.Black,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                            )
+                                        }
                                         Text(
                                             comment.text,
                                             style = MaterialTheme.typography.bodyMedium,
