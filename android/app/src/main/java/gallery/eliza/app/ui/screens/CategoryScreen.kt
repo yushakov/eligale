@@ -64,7 +64,8 @@ fun CategoryScreen(
     }
 
     // Polling счётчика непрочитанных чатов каждые 15 сек
-    LaunchedEffect(token) {
+    // isStaff в ключах — чтобы сразу вызывать правильный эндпоинт без ожидания 15 сек
+    LaunchedEffect(token, isStaff) {
         if (token == null) { unreadCount = 0; return@LaunchedEffect }
         while (true) {
             try {
@@ -121,24 +122,18 @@ fun CategoryScreen(
             TopAppBar(
                 title = { Text("Eliza Gallery") },
                 actions = {
-                    // Кнопка "Комментарии" с бейджем (только для staff)
+                    // Кнопка "Комменты" с красной точкой (только для staff)
                     if (token != null && isStaff) {
                         Box {
                             TextButton(onClick = onCommentsClick) {
                                 Text("Комменты")
                             }
                             if (unreadCommentCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-2).dp, y = 6.dp)
-                                ) {
-                                    UnreadBadge(unreadCommentCount)
-                                }
+                                RedDot(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 8.dp))
                             }
                         }
                     }
-                    // Кнопка чата с бейджем
+                    // Кнопка чата с красной точкой
                     if (token != null) {
                         Box {
                             TextButton(onClick = {
@@ -147,13 +142,7 @@ fun CategoryScreen(
                                 Text(if (isStaff) "Чаты" else "Чат")
                             }
                             if (unreadCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-2).dp, y = 6.dp)
-                                ) {
-                                    UnreadBadge(unreadCount)
-                                }
+                                RedDot(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 8.dp))
                             }
                         }
                     } else {

@@ -34,6 +34,7 @@ fun CommentListScreen(
     var comments by remember { mutableStateOf<List<StaffComment>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var deleteConfirmId by remember { mutableStateOf<Int?>(null) }
+    val unreadCount = comments.count { !it.is_read_by_staff }
     val scope = rememberCoroutineScope()
 
     suspend fun load() {
@@ -76,7 +77,18 @@ fun CommentListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Комментарии") },
+                title = {
+                    Column {
+                        Text("Комментарии")
+                        if (unreadCount > 0) {
+                            Text(
+                                "Непрочитанных: $unreadCount",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
