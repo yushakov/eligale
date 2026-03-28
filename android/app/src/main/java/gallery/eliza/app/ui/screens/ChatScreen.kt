@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -74,6 +75,7 @@ fun ChatScreen(
     staffUserId: Int?,        // null = режим пользователя, Int = staff смотрит чат юзера
     chatTitle: String,
     onBack: () -> Unit,
+    onHome: () -> Unit = {},
     onOpenProduct: ((productId: Int, imageIndex: Int) -> Unit)? = null,
     initialText: String = "",
 ) {
@@ -197,6 +199,11 @@ fun ChatScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onHome) {
+                        Icon(Icons.Filled.Home, contentDescription = "На главную")
                     }
                 }
             )

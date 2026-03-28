@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ fun CommentListScreen(
     onOpenChat: (userId: Int, userEmail: String) -> Unit,
     onOpenProduct: (productId: Int, commentId: Int) -> Unit,
     onBack: () -> Unit,
+    onHome: () -> Unit = {},
 ) {
     var comments by remember { mutableStateOf<List<StaffComment>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -92,6 +94,11 @@ fun CommentListScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onHome) {
+                        Icon(Icons.Filled.Home, contentDescription = "На главную")
                     }
                 }
             )

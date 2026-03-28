@@ -102,7 +102,8 @@ class MainActivity : ComponentActivity() {
                             onProductClick = { id ->
                                 navController.navigate("product/$id?categoryId=$catId&categoryName=${Uri.encode(catName)}")
                             },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onHome = { navController.popBackStack("categories", false) },
                         )
                     }
                     composable(
@@ -145,6 +146,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("chats?pendingText=${Uri.encode(pendingText)}")
                                 }
                             } else null,
+                            onHome = { navController.popBackStack("categories", false) },
                         )
                     }
                     // Чат пользователя
@@ -155,6 +157,7 @@ class MainActivity : ComponentActivity() {
                             staffUserId = null,
                             chatTitle = "Чат с Елизаветой",
                             onBack = { navController.popBackStack() },
+                            onHome = { navController.popBackStack("categories", false) },
                             onOpenProduct = { productId, imageIndex ->
                                 navController.navigate("product/$productId?imageIndex=$imageIndex")
                             },
@@ -172,6 +175,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("product/$productId?commentId=$commentId")
                             },
                             onBack = { navController.popBackStack() },
+                            onHome = { navController.popBackStack("categories", false) },
                         )
                     }
                     // Список чатов (staff)
@@ -189,6 +193,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("chat_staff/$userId?email=$userEmail&initialText=${Uri.encode(pendingText)}")
                             },
                             onBack = { navController.popBackStack() },
+                            onHome = { navController.popBackStack("categories", false) },
                         )
                     }
                     // Чат staff с конкретным пользователем
@@ -209,6 +214,7 @@ class MainActivity : ComponentActivity() {
                             staffUserId = userId,
                             chatTitle = email,
                             onBack = { navController.popBackStack() },
+                            onHome = { navController.popBackStack("categories", false) },
                             onOpenProduct = { productId, imageIndex ->
                                 navController.navigate("product/$productId?imageIndex=$imageIndex")
                             },

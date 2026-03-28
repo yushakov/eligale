@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import android.app.DownloadManager
@@ -56,6 +57,7 @@ fun ProductDetailScreen(
     onGoToChat: (() -> Unit)? = null,
     onGoToChats: ((pendingText: String) -> Unit)? = null,
     categoryName: String = "",
+    onHome: () -> Unit = {},
 ) {
     var product by remember { mutableStateOf<ProductDetail?>(null) }
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
@@ -113,6 +115,11 @@ fun ProductDetailScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onHome) {
+                            Icon(Icons.Filled.Home, contentDescription = "На главную")
                         }
                     }
                 )
