@@ -25,6 +25,69 @@ from .models import Category, Product, ProductImage, Comment
 from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer
 
 
+def _make_snippet(text: str, query: str, context: int = 80) -> str:
+    idx = text.lower().find(query.lower())
+    if idx == -1:
+        end = min(len(text), 160)
+        return text[:end] + ('…' if len(text) > end else '')
+    start = max(0, idx - context)
+    end = min(len(text), idx + len(query) + context)
+    snippet = text[start:end]
+    if start > 0:
+        snippet = '…' + snippet
+    if end < len(text):
+        snippet = snippet + '…'
+    return snippet
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def search(request):
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return Response([])
+
+    from chat.models import ChatMessage as CM
+
+    results = []
+
+    comments_qs = (
+        Comment.objects
+        .filter(text__icontains=q)
+        .select_related('product', 'user')
+        .order_by('-created_at')[:100]
+    )
+    for c in comments_qs:
+        results.append({
+            'type': 'comment',
+            'id': c.id,
+            'snippet': _make_snippet(c.text, q),
+            'created_at': c.created_at.isoformat(),
+            'product_id': c.product_id,
+            'product_name': c.product.name,
+            'author': c.user.display_name or c.user.email,
+        })
+
+    if request.user.is_staff:
+        messages_qs = CM.objects.filter(text__icontains=q).select_related('chat', 'chat__user')
+    else:
+        messages_qs = CM.objects.filter(chat__user=request.user, text__icontains=q).select_related('chat', 'chat__user')
+
+    for m in messages_qs.order_by('-created_at')[:100]:
+        results.append({
+            'type': 'message',
+            'id': m.id,
+            'snippet': _make_snippet(m.text, q),
+            'created_at': m.created_at.isoformat(),
+            'chat_user_id': m.chat.user_id,
+            'user_email': m.chat.user.email,
+        })
+
+    results.sort(key=lambda x: x['created_at'], reverse=True)
+    return Response(results[:100])
+
+
 def _get_s3_client():
     session = boto3.session.Session()
     return session.client(
