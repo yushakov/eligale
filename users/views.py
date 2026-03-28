@@ -111,7 +111,7 @@ def profile(request):
     except Exception:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    return Response({'email': user.email, 'display_name': user.display_name or ''})
+    return Response({'email': user.email, 'display_name': user.display_name or '', 'is_staff': user.is_staff})
 
 
 @api_view(['DELETE'])
