@@ -126,18 +126,12 @@ fun RedDot(modifier: Modifier = Modifier, size: Dp = 8.dp) {
 
 @Composable
 fun UnreadBadge(count: Int) {
-    Box(
-        modifier = Modifier
-            .size(22.dp)
-            .then(
-                if (count > 9) Modifier.wrapContentWidth() else Modifier
-            ),
-        contentAlignment = Alignment.Center,
+    Surface(
+        shape = CircleShape,
+        color = BrownDark,
+        modifier = Modifier.defaultMinSize(minWidth = 22.dp, minHeight = 22.dp),
     ) {
-        Surface(
-            shape = CircleShape,
-            color = BrownDark,
-        ) {
+        Box(contentAlignment = Alignment.Center) {
             Text(
                 text = if (count > 99) "99+" else count.toString(),
                 color = Color.White,
