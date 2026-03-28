@@ -7,8 +7,8 @@
 ## Стек
 - **Backend**: Django 4.2 + SQLite + gunicorn + nginx, сервер на Digital Ocean
 - **Storage**: Yandex Object Storage (S3-compatible, boto3)
-  - Публичный бакет `gallery-media-public` — изображения каталога
-  - Приватный бакет `gallery-media-private` (KMS-шифрование) — зарезервирован под медиа в чате (V3)
+  - Публичный бакет `gallery-media-public` — изображения каталога + медиафайлы чата (папка `chat/`)
+  - Приватный бакет `gallery-media-private` (KMS-шифрование) — зарезервирован под голосовые и др.
 - **Email**: Resend через `django-anymail` (домен `otp.eliza.gallery`, DNS в Cloudflare)
 - **API**: Django REST Framework + Token Authentication
 - **Android**: Kotlin + Jetpack Compose + Retrofit + Coil + Navigation Compose + Room (KSP 2.2.10-2.0.2)
@@ -25,7 +25,7 @@ catalog/         — модели каталога, API, мобильные view
   widgets.py     — ImageUploadWidget (presign → S3 прямо из admin)
 users/           — кастомная модель User, авторизация по email
   models.py      — User (email как username), EmailVerification
-  views.py       — request_code, verify_code, set_name, profile, delete_account
+  views.py       — request_code, verify_code, set_name, profile, delete_account, logout
   urls.py        — /api/auth/...
 chat/            — приватные чаты между пользователем и staff
   models.py      — Chat, ChatMessage
@@ -105,6 +105,7 @@ ChatMessage: chat (FK), sender (FK → User), text, is_read, created_at
 - `POST /api/auth/verify-code/` — проверить код, вернуть token + has_name
 - `POST /api/auth/set-name/` — сохранить display_name (требует токен)
 - `GET /api/auth/profile/` — профиль пользователя; включает `is_staff`
+- `POST /api/auth/logout/` — удалить токен из БД (разлогинивает все устройства)
 - `DELETE /api/auth/delete-account/` — удалить аккаунт (staff защищены, 403)
 
 ### Chat API (пользователь)
@@ -113,6 +114,7 @@ ChatMessage: chat (FK), sender (FK → User), text, is_read, created_at
 - `POST /api/chat/messages/send/` — отправить сообщение
 - `POST /api/chat/mark-read/` — пометить прочитанными до `up_to_id`
 - `GET /api/chat/unread/` — количество непрочитанных от staff
+- `POST /api/chat/media/presign/` — presign для загрузки медиа в публичный бакет (папка `chat/`); доступен любому авторизованному пользователю и staff; возвращает `upload_url` и `public_url`
 
 ### Chat API (staff)
 - `GET /api/chats/` — список всех чатов с `user_id`, `unread_count`, `last_message`, сортировка по `last_message_at`
@@ -133,12 +135,12 @@ ChatMessage: chat (FK), sender (FK → User), text, is_read, created_at
 - Чат: CategoryScreen → ChatScreen (пользователь) или ChatListScreen → ChatScreen (staff)
 - **CategoryScreen**: плитка 2 колонки, круглые обложки с мягкими краями (radial gradient), название + "товаров: N" в полупрозрачном прямоугольнике поверх нижней четверти круга. Кнопка "Чат" (пользователь) или "Чаты" (staff) с бейджем непрочитанных. Polling счётчика каждые 15 сек (пока CategoryScreen активен).
 - **ProductListScreen**: сетка 4 колонки, квадратные фото, оверлей "N фото" снизу слева
-- **ProductDetailScreen**: галерея (HorizontalPager), двойной тап → fullscreen с зумом и кнопкой "Скачать" (DownloadManager), описание, комментарии, поле ввода. Для staff: имена авторов комментариев — кликабельные ссылки в чат с этим пользователем.
-- **ChatScreen**: универсальный (пользователь и staff). Polling новых сообщений каждые 5 сек пока экран открыт. Кнопка "Загрузить историю" вверху при пустой локальной БД. Сообщения хранятся в Room (локальная SQLite).
+- **ProductDetailScreen**: название товара над галереей (жирно, мелко). TopAppBar показывает название категории. Кнопка "В чат" на каждом фото галереи: для пользователя — диалог "Вас интересует данный продукт?" (Да/Нет, просто в чат), "Да" отправляет сообщение `"Интересует товар «name» (фото N)\n[product:id:page]"` и переходит в чат; для staff — диалог "В чат с этим товаром?" (Да/Нет), "Да" предзаполняет `[product:id:page]` в поле ввода выбранного чата. Двойной тап → fullscreen с зумом и "Скачать" (DownloadManager). Кнопка "Скачать" поднята над навигационной панелью (`navigationBarsPadding`). Для staff: имена авторов комментариев — кликабельные ссылки в чат. Кнопка "Назад" ведёт в категорию (не в чат).
+- **ChatScreen**: универсальный (пользователь и staff). Polling новых сообщений каждые 5 сек. Кнопка "Загрузить историю" вверху (показывается если первый запрос вернул ≥50 сообщений); после загрузки всей истории — текст "Начало переписки". Сообщения в Room `chat_messages` с полем `chat_user_id` (0 = свой чат, >0 = staff смотрит чат юзера X — изоляция по пользователю). Поддержка медиа: кнопка 🖼 открывает галерею, фото сжимается в JPEG 85%, загружается PUT напрямую в Яндекс (presign), отправляется как `[image:url]`. Сообщения с `[image:url]` рендерятся как изображение (Coil), двойной тап → fullscreen (переиспользует `FullscreenImageViewer` из ProductDetailScreen). Сообщения с `[product:id:page]` рендерятся с тапабельной ссылкой "→ Открыть товар". При открытии чата staff с продуктом — ссылка предзаполняется в поле ввода (`initialText`). Кнопка "Выйти" вызывает `POST /api/auth/logout/` перед очисткой локального токена.
 - **ChatListScreen**: только для staff. Список чатов с бейджами непрочитанных, сортировка по последнему сообщению. Polling каждые 15 сек.
 - AuthDialog: 3 шага — email → код → имя (шаг 3 только при первом входе)
 - TokenStorage: токен в SharedPreferences
-- Room: `ChatDatabase` (ChatMessageEntity, ChatMessageDao) в `data/ChatDatabase.kt`
+- Room: `ChatDatabase` (ChatMessageEntity, ChatMessageDao) в `data/ChatDatabase.kt`, версия 2, `fallbackToDestructiveMigration()`
 - Тема: белый фон, тёмно-коричневый текст (#3E2000), без dynamic color и тёмной темы
 - Pull-to-refresh на всех экранах с аддитивным мёржем по ID (новые добавляются, удалённые игнорируются)
 - При сетевой ошибке: экран с кнопкой "Переподключиться" вместо сырого текста
@@ -191,11 +193,12 @@ python manage.py runserver 0.0.0.0:8000
 ## Роадмап
 - **V1** ✅: каталог с изображениями, мобильный интерфейс управления
 - **V2** ✅: комментарии, регистрация через email, display_name, текстовый чат
-- **V3**: медиа в чате (фото/голос через приватный бакет), шеринг товаров (App Links)
+- **V2.5** ✅: фото в чате (публичный бакет, папка `chat/`), кнопка "В чат" на товарах, fullscreen фото в чате, server-side logout
+- **V3**: голосовые в чате (приватный бакет), шеринг товаров (App Links)
 
 ## Авторизация — важные нюансы
-- Один токен на пользователя (`Token.objects.get_or_create`). Несколько устройств работают с одним токеном одновременно — друг друга не разлогинивают.
-- Logout на бэкенде не реализован — кнопка "Выйти" только чистит токен локально на устройстве. Если добавить `DELETE /api/auth/logout/` с `token.delete()`, выход будет разлогинивать все устройства сразу.
+- Один токен на пользователя (`Token.objects.get_or_create`). Несколько устройств работают с одним токеном одновременно.
+- `POST /api/auth/logout/` удаляет токен из БД — разлогинивает все устройства сразу. Android вызывает его перед очисткой локального токена.
 - Staff-аккаунты защищены от удаления через API (403).
 
 ## Запланировано на будущее
@@ -213,5 +216,10 @@ python manage.py runserver 0.0.0.0:8000
 4. **Android**: в `MainActivity` перехватывать входящий `Intent` и навигировать на `ProductDetailScreen`
 5. **Android**: кнопка "Поделиться" в `ProductDetailScreen`, шерит `https://eliza.gallery/products/{id}/`
 
-### Медиа в чате (V3)
-Фото и голосовые сообщения через приватный бакет Яндекса. Разметка в тексте: `[image:key]` / `[voice:key]`. Новые сообщения с медиа — загружаются автоматически; старые — по тапу "📷 Изображение" / "🎙 Голосовое".
+### Голосовые сообщения в чате
+Фото в чате реализованы (V2.5, публичный бакет папка `chat/`). Голосовые — ещё нет. Разметка: `[voice:key]`. Загрузка через приватный бакет. По тапу "🎙 Голосовое" загружать и воспроизводить.
+
+### Навигационные маршруты Android (важно для расширения)
+- `"product/{productId}?categoryId={categoryId}&categoryName={categoryName}&commentId={commentId}&imageIndex={imageIndex}"`
+- `"chats?pendingText={pendingText}"` — staff список чатов с опциональным предзаполненным текстом
+- `"chat_staff/{userId}?email={email}&initialText={initialText}"` — чат staff с предзаполненным полем ввода
