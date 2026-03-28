@@ -2,20 +2,24 @@ package gallery.eliza.app.ui.screens
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import gallery.eliza.app.data.ProductImage
 import gallery.eliza.app.ui.theme.ElizaGalleryTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Тесты для ProductGallery — проверяют, что pagerState корректно отражает initialPage
  * и передаёт текущую страницу в колбэки. Это гарантирует, что кнопка "В чат"
  * всегда отправляет правильный индекс фото.
+ *
+ * Используем Robolectric (JVM), чтобы не зависеть от версии Android на устройстве.
  */
-@RunWith(AndroidJUnit4::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class ProductGalleryTest {
 
     @get:Rule
