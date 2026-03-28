@@ -18,10 +18,11 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.decorators import authentication_classes, permission_classes
 
 from .models import Category, Product, ProductImage, Comment
-from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer
+from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer
 
 
 def _get_s3_client():
@@ -128,6 +129,37 @@ def comment_list(request, product_id):
 
     comment = Comment.objects.create(product=product, user=user, text=text)
     return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+
+
+# ── Staff comment endpoints ───────────────────────────────────────────────────
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_comment_list(request):
+    comments = (Comment.objects
+                .select_related('user', 'product')
+                .filter(product__is_hidden=False)
+                .order_by('-created_at')[:50])
+    return Response(StaffCommentSerializer(comments, many=True).data)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_comment_unread(request):
+    count = Comment.objects.filter(product__is_hidden=False, is_read_by_staff=False).count()
+    return Response({'unread': count})
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_comment_mark_read(request, comment_id):
+    comment = get_object_or_404(Comment, pk=comment_id)
+    comment.is_read_by_staff = True
+    comment.save(update_fields=['is_read_by_staff'])
+    return Response({'ok': True})
 
 
 # ── Mobile views ──────────────────────────────────────────────────────────────

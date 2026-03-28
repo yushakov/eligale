@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.foundation.pager.rememberPagerState
@@ -47,6 +48,7 @@ fun ProductDetailScreen(
     onTokenChange: (String?) -> Unit,
     isStaff: Boolean = false,
     onOpenChat: (userId: Int, userEmail: String) -> Unit = { _, _ -> },
+    scrollToCommentId: Int? = null,
 ) {
     var product by remember { mutableStateOf<ProductDetail?>(null) }
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
@@ -59,6 +61,7 @@ fun ProductDetailScreen(
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     LaunchedEffect(productId, retryKey) {
         loading = true
@@ -71,6 +74,18 @@ fun ProductDetailScreen(
         } finally {
             loading = false
         }
+    }
+
+    // Прокрутка к нужному комментарию после загрузки
+    LaunchedEffect(comments, scrollToCommentId) {
+        if (scrollToCommentId == null || comments.isEmpty() || product == null) return@LaunchedEffect
+        val commentIndex = comments.indexOfFirst { it.id == scrollToCommentId }
+        if (commentIndex < 0) return@LaunchedEffect
+        val hasImages = product!!.images.isNotEmpty() || product!!.cover_url != null
+        val hasDescription = product!!.description.isNotBlank()
+        // Индексы: gallery(1) + description(0/1) + header(1) + commentIndex
+        val targetIndex = (if (hasImages) 1 else 0) + (if (hasDescription) 1 else 0) + 1 + commentIndex
+        listState.animateScrollToItem(targetIndex)
     }
 
     if (showAuth) {
@@ -134,7 +149,7 @@ fun ProductDetailScreen(
                             },
                             modifier = Modifier.fillMaxSize()
                         ) {
-                        LazyColumn(Modifier.fillMaxSize()) {
+                        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                             // Галерея
                             item {
                                 if (images.isNotEmpty()) {

@@ -516,3 +516,114 @@ class PresignUploadAPITest(TestCase):
         self.assertEqual(params['Key'], object_key)
         self.assertEqual(params['ContentType'], 'image/jpeg')
         self.assertEqual(call_kwargs[1].get('HttpMethod') or call_kwargs[0][2], 'PUT')
+
+
+# ── Staff comment endpoints ────────────────────────────────────────────────────
+
+class StaffCommentTestBase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='user@example.com', password='pass')
+        self.staff = User.objects.create_superuser(email='staff@example.com', password='pass')
+        self.user_token = Token.objects.create(user=self.user)
+        self.staff_token = Token.objects.create(user=self.staff)
+        self.product = Product.objects.create(name='Кольцо')
+        self.comment = Comment.objects.create(product=self.product, user=self.user, text='Красиво!')
+
+    def staff_auth(self):
+        return {'HTTP_AUTHORIZATION': f'Token {self.staff_token.key}'}
+
+    def user_auth(self):
+        return {'HTTP_AUTHORIZATION': f'Token {self.user_token.key}'}
+
+
+class StaffCommentListTest(StaffCommentTestBase):
+    def test_requires_auth(self):
+        r = self.client.get('/api/staff/comments/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_requires_staff(self):
+        r = self.client.get('/api/staff/comments/', **self.user_auth())
+        self.assertEqual(r.status_code, 403)
+
+    def test_returns_comments(self):
+        r = self.client.get('/api/staff/comments/', **self.staff_auth())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.json()), 1)
+
+    def test_has_expected_fields(self):
+        r = self.client.get('/api/staff/comments/', **self.staff_auth())
+        c = r.json()[0]
+        for field in ['id', 'user_id', 'user_email', 'user_display_name', 'product_id', 'product_name', 'text', 'is_read_by_staff', 'created_at']:
+            self.assertIn(field, c)
+
+    def test_is_read_by_staff_default_false(self):
+        r = self.client.get('/api/staff/comments/', **self.staff_auth())
+        self.assertFalse(r.json()[0]['is_read_by_staff'])
+
+    def test_excludes_comments_on_hidden_products(self):
+        hidden_product = Product.objects.create(name='Скрытое', is_hidden=True)
+        Comment.objects.create(product=hidden_product, user=self.user, text='Тест')
+        r = self.client.get('/api/staff/comments/', **self.staff_auth())
+        product_ids = [c['product_id'] for c in r.json()]
+        self.assertNotIn(hidden_product.id, product_ids)
+
+    def test_sorted_newest_first(self):
+        comment2 = Comment.objects.create(product=self.product, user=self.user, text='Второй')
+        r = self.client.get('/api/staff/comments/', **self.staff_auth())
+        ids = [c['id'] for c in r.json()]
+        self.assertEqual(ids[0], comment2.id)
+
+    def test_product_id_correct(self):
+        r = self.client.get('/api/staff/comments/', **self.staff_auth())
+        self.assertEqual(r.json()[0]['product_id'], self.product.id)
+
+
+class StaffCommentUnreadTest(StaffCommentTestBase):
+    def test_requires_auth(self):
+        r = self.client.get('/api/staff/comments/unread/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_requires_staff(self):
+        r = self.client.get('/api/staff/comments/unread/', **self.user_auth())
+        self.assertEqual(r.status_code, 403)
+
+    def test_counts_unread(self):
+        r = self.client.get('/api/staff/comments/unread/', **self.staff_auth())
+        self.assertEqual(r.json()['unread'], 1)
+
+    def test_zero_when_all_read(self):
+        self.comment.is_read_by_staff = True
+        self.comment.save()
+        r = self.client.get('/api/staff/comments/unread/', **self.staff_auth())
+        self.assertEqual(r.json()['unread'], 0)
+
+    def test_excludes_hidden_product_comments(self):
+        hidden_product = Product.objects.create(name='Скрытое', is_hidden=True)
+        Comment.objects.create(product=hidden_product, user=self.user, text='Тест')
+        r = self.client.get('/api/staff/comments/unread/', **self.staff_auth())
+        self.assertEqual(r.json()['unread'], 1)  # только видимый
+
+
+class StaffCommentMarkReadTest(StaffCommentTestBase):
+    def test_requires_auth(self):
+        r = self.client.post(f'/api/staff/comments/{self.comment.id}/mark-read/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_requires_staff(self):
+        r = self.client.post(f'/api/staff/comments/{self.comment.id}/mark-read/', **self.user_auth())
+        self.assertEqual(r.status_code, 403)
+
+    def test_marks_as_read(self):
+        self.client.post(f'/api/staff/comments/{self.comment.id}/mark-read/', **self.staff_auth())
+        self.comment.refresh_from_db()
+        self.assertTrue(self.comment.is_read_by_staff)
+
+    def test_returns_ok(self):
+        r = self.client.post(f'/api/staff/comments/{self.comment.id}/mark-read/', **self.staff_auth())
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()['ok'])
+
+    def test_404_for_missing_comment(self):
+        r = self.client.post('/api/staff/comments/99999/mark-read/', **self.staff_auth())
+        self.assertEqual(r.status_code, 404)

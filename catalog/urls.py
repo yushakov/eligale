@@ -8,6 +8,9 @@ urlpatterns = [
     path('api/categories/<int:category_id>/products/', views.product_list, name='product_list'),
     path('api/products/<int:product_id>/', views.product_detail, name='product_detail'),
     path('api/products/<int:product_id>/comments/', views.comment_list, name='comment_list'),
+    path('api/staff/comments/', views.staff_comment_list, name='staff_comment_list'),
+    path('api/staff/comments/unread/', views.staff_comment_unread, name='staff_comment_unread'),
+    path('api/staff/comments/<int:comment_id>/mark-read/', views.staff_comment_mark_read, name='staff_comment_mark_read'),
 
     # Mobile
     path('mobile/', views.mobile_home, name='mobile_home'),

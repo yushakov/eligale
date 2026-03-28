@@ -74,3 +74,15 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_author(self, obj):
         return obj.user.display_name or obj.user.email.split('@')[0]
+
+
+class StaffCommentSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_display_name = serializers.CharField(source='user.display_name', read_only=True, allow_null=True)
+    product_id = serializers.IntegerField(source='product.id', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'user_id', 'user_email', 'user_display_name', 'product_id', 'product_name', 'text', 'is_read_by_staff', 'created_at']

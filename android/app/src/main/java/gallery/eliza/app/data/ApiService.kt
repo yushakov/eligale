@@ -44,6 +44,20 @@ interface ApiService {
     @DELETE("api/auth/delete-account/")
     suspend fun deleteAccount(@Header("Authorization") token: String)
 
+    // ── Staff комментарии ─────────────────────────────────────────────────────
+
+    @GET("api/staff/comments/")
+    suspend fun getStaffComments(@Header("Authorization") token: String): List<StaffComment>
+
+    @GET("api/staff/comments/unread/")
+    suspend fun getStaffCommentsUnread(@Header("Authorization") token: String): UnreadCount
+
+    @POST("api/staff/comments/{id}/mark-read/")
+    suspend fun markStaffCommentRead(
+        @Header("Authorization") token: String,
+        @Path("id") commentId: Int,
+    )
+
     // ── Чат (пользователь) ────────────────────────────────────────────────────
 
     @GET("api/chat/")

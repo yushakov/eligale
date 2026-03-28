@@ -36,6 +36,7 @@ fun CategoryScreen(
     onTokenChange: (String?) -> Unit,
     onChatClick: () -> Unit,
     onChatsClick: () -> Unit,
+    onCommentsClick: () -> Unit,
     isStaff: Boolean,
 ) {
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
@@ -46,6 +47,7 @@ fun CategoryScreen(
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     var unreadCount by remember { mutableStateOf(0) }
+    var unreadCommentCount by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(retryKey) {
@@ -61,7 +63,7 @@ fun CategoryScreen(
         }
     }
 
-    // Polling счётчика непрочитанных каждые 15 сек
+    // Polling счётчика непрочитанных чатов каждые 15 сек
     LaunchedEffect(token) {
         if (token == null) { unreadCount = 0; return@LaunchedEffect }
         while (true) {
@@ -71,6 +73,17 @@ fun CategoryScreen(
                 } else {
                     Api.service.getChatUnread("Token $token").unread
                 }
+            } catch (_: Exception) { }
+            delay(15_000)
+        }
+    }
+
+    // Polling счётчика непрочитанных комментариев (только для staff) каждые 15 сек
+    LaunchedEffect(token, isStaff) {
+        if (token == null || !isStaff) { unreadCommentCount = 0; return@LaunchedEffect }
+        while (true) {
+            try {
+                unreadCommentCount = Api.service.getStaffCommentsUnread("Token $token").unread
             } catch (_: Exception) { }
             delay(15_000)
         }
@@ -106,6 +119,23 @@ fun CategoryScreen(
             TopAppBar(
                 title = { Text("Eliza Gallery") },
                 actions = {
+                    // Кнопка "Комментарии" с бейджем (только для staff)
+                    if (token != null && isStaff) {
+                        Box {
+                            TextButton(onClick = onCommentsClick) {
+                                Text("Комменты")
+                            }
+                            if (unreadCommentCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-2).dp, y = 6.dp)
+                                ) {
+                                    UnreadBadge(unreadCommentCount)
+                                }
+                            }
+                        }
+                    }
                     // Кнопка чата с бейджем
                     if (token != null) {
                         Box {

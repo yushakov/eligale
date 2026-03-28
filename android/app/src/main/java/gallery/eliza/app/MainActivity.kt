@@ -21,6 +21,7 @@ import gallery.eliza.app.data.TokenStorage
 import gallery.eliza.app.ui.screens.CategoryScreen
 import gallery.eliza.app.ui.screens.ChatListScreen
 import gallery.eliza.app.ui.screens.ChatScreen
+import gallery.eliza.app.ui.screens.CommentListScreen
 import gallery.eliza.app.ui.screens.ProductDetailScreen
 import gallery.eliza.app.ui.screens.ProductListScreen
 import gallery.eliza.app.ui.theme.ElizaGalleryTheme
@@ -81,6 +82,7 @@ class MainActivity : ComponentActivity() {
                             onTokenChange = onTokenChange,
                             onChatClick = { navController.navigate("chat") },
                             onChatsClick = { navController.navigate("chats") },
+                            onCommentsClick = { navController.navigate("comments") },
                             isStaff = isStaff,
                         )
                     }
@@ -99,9 +101,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(
-                        "product/{productId}",
-                        arguments = listOf(navArgument("productId") { type = NavType.IntType })
+                        "product/{productId}?commentId={commentId}",
+                        arguments = listOf(
+                            navArgument("productId") { type = NavType.IntType },
+                            navArgument("commentId") { type = NavType.IntType; defaultValue = -1 },
+                        )
                     ) { backStack ->
+                        val commentId = backStack.arguments!!.getInt("commentId").takeIf { it != -1 }
                         ProductDetailScreen(
                             productId = backStack.arguments!!.getInt("productId"),
                             onBack = { navController.popBackStack() },
@@ -111,6 +117,7 @@ class MainActivity : ComponentActivity() {
                             onOpenChat = { userId, userEmail ->
                                 navController.navigate("chat_staff/$userId?email=$userEmail")
                             },
+                            scrollToCommentId = commentId,
                         )
                     }
                     // Чат пользователя
@@ -120,6 +127,20 @@ class MainActivity : ComponentActivity() {
                             token = t,
                             staffUserId = null,
                             chatTitle = "Чат с Елизаветой",
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                    // Список комментариев (staff)
+                    composable("comments") {
+                        val t = token ?: return@composable
+                        CommentListScreen(
+                            token = t,
+                            onOpenChat = { userId, userEmail ->
+                                navController.navigate("chat_staff/$userId?email=$userEmail")
+                            },
+                            onOpenProduct = { productId, commentId ->
+                                navController.navigate("product/$productId?commentId=$commentId")
+                            },
                             onBack = { navController.popBackStack() },
                         )
                     }

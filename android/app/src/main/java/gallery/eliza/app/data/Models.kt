@@ -66,6 +66,18 @@ data class ChatListItem(
 
 data class ChatLastMessage(val text: String, val created_at: String)
 
+data class StaffComment(
+    val id: Int,
+    val user_id: Int,
+    val user_email: String,
+    val user_display_name: String?,
+    val product_id: Int,
+    val product_name: String,
+    val text: String,
+    val is_read_by_staff: Boolean,
+    val created_at: String,
+)
+
 data class RequestCodeBody(val email: String)
 data class VerifyCodeBody(val email: String, val code: String)
 data class TokenResponse(val token: String, val has_name: Boolean)
