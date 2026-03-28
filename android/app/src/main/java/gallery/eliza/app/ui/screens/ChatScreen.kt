@@ -16,8 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import gallery.eliza.app.data.*
 import gallery.eliza.app.ui.theme.BrownDark
 import kotlinx.coroutines.delay
@@ -50,8 +53,22 @@ fun ChatScreen(
     var loadingHistory by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
-    // Начальная загрузка: читаем локальную БД, затем подгружаем новые с сервера
-    LaunchedEffect(Unit) {
+    // Перезапускаем загрузку при каждом RESUME (в т.ч. после пробуждения телефона)
+    var resumeKey by remember { mutableStateOf(0) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Начальная загрузка: читаем локальную БД, затем подгружаем новые с сервера.
+    // Перезапускается при каждом RESUME, чтобы экран оживал после сна телефона.
+    LaunchedEffect(resumeKey) {
+        val isFirstLoad = resumeKey == 0
+
         val local = dao.getAll().map { it.toModel() }
         messages = local
 
@@ -70,11 +87,14 @@ fun ChatScreen(
                 dao.insertAll(fresh.map { it.toEntity() })
                 messages = dao.getAll().map { it.toModel() }
                 markRead(context, token, staffUserId, fresh.last().id, dao)
+                listState.animateScrollToItem(messages.size - 1)
+            } else if (isFirstLoad && messages.isNotEmpty()) {
+                listState.scrollToItem(messages.size - 1)
             }
-        } catch (_: Exception) { }
-
-        if (messages.isNotEmpty()) {
-            listState.scrollToItem(messages.size - 1)
+        } catch (_: Exception) {
+            if (isFirstLoad && messages.isNotEmpty()) {
+                listState.scrollToItem(messages.size - 1)
+            }
         }
     }
 
