@@ -1,5 +1,6 @@
 package gallery.eliza.app
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -93,26 +94,40 @@ class MainActivity : ComponentActivity() {
                             navArgument("name") { defaultValue = "" }
                         )
                     ) { backStack ->
+                        val catId = backStack.arguments!!.getInt("categoryId")
+                        val catName = backStack.arguments!!.getString("name") ?: ""
                         ProductListScreen(
-                            categoryId = backStack.arguments!!.getInt("categoryId"),
-                            categoryName = backStack.arguments!!.getString("name") ?: "",
-                            onProductClick = { id -> navController.navigate("product/$id") },
+                            categoryId = catId,
+                            categoryName = catName,
+                            onProductClick = { id ->
+                                navController.navigate("product/$id?categoryId=$catId&categoryName=${Uri.encode(catName)}")
+                            },
                             onBack = { navController.popBackStack() }
                         )
                     }
                     composable(
-                        "product/{productId}?commentId={commentId}&imageIndex={imageIndex}",
+                        "product/{productId}?categoryId={categoryId}&categoryName={categoryName}&commentId={commentId}&imageIndex={imageIndex}",
                         arguments = listOf(
                             navArgument("productId") { type = NavType.IntType },
+                            navArgument("categoryId") { type = NavType.IntType; defaultValue = -1 },
+                            navArgument("categoryName") { defaultValue = "" },
                             navArgument("commentId") { type = NavType.IntType; defaultValue = -1 },
                             navArgument("imageIndex") { type = NavType.IntType; defaultValue = 0 },
                         )
                     ) { backStack ->
+                        val categoryId = backStack.arguments!!.getInt("categoryId")
+                        val categoryName = backStack.arguments!!.getString("categoryName") ?: ""
                         val commentId = backStack.arguments!!.getInt("commentId").takeIf { it != -1 }
                         val imageIndex = backStack.arguments!!.getInt("imageIndex")
                         ProductDetailScreen(
                             productId = backStack.arguments!!.getInt("productId"),
-                            onBack = { navController.popBackStack() },
+                            onBack = {
+                                if (categoryId > 0) {
+                                    navController.popBackStack()
+                                } else {
+                                    navController.popBackStack("categories", false)
+                                }
+                            },
                             token = token,
                             onTokenChange = onTokenChange,
                             isStaff = isStaff,
@@ -121,8 +136,14 @@ class MainActivity : ComponentActivity() {
                             },
                             scrollToCommentId = commentId,
                             initialImagePage = imageIndex,
+                            categoryName = categoryName,
                             onGoToChat = if (token != null && !isStaff) {
                                 { navController.navigate("chat") }
+                            } else null,
+                            onGoToChats = if (isStaff) {
+                                { pendingText ->
+                                    navController.navigate("chats?pendingText=${Uri.encode(pendingText)}")
+                                }
                             } else null,
                         )
                     }
@@ -154,27 +175,35 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     // Список чатов (staff)
-                    composable("chats") {
+                    composable(
+                        "chats?pendingText={pendingText}",
+                        arguments = listOf(
+                            navArgument("pendingText") { defaultValue = "" },
+                        )
+                    ) { backStack ->
                         val t = token ?: return@composable
+                        val pendingText = backStack.arguments!!.getString("pendingText") ?: ""
                         ChatListScreen(
                             token = t,
                             onChatClick = { userId, userEmail ->
-                                navController.navigate("chat_staff/$userId?email=$userEmail")
+                                navController.navigate("chat_staff/$userId?email=$userEmail&initialText=${Uri.encode(pendingText)}")
                             },
                             onBack = { navController.popBackStack() },
                         )
                     }
                     // Чат staff с конкретным пользователем
                     composable(
-                        "chat_staff/{userId}?email={email}",
+                        "chat_staff/{userId}?email={email}&initialText={initialText}",
                         arguments = listOf(
                             navArgument("userId") { type = NavType.IntType },
                             navArgument("email") { defaultValue = "" },
+                            navArgument("initialText") { defaultValue = "" },
                         )
                     ) { backStack ->
                         val t = token ?: return@composable
                         val userId = backStack.arguments!!.getInt("userId")
                         val email = backStack.arguments!!.getString("email") ?: ""
+                        val initialText = backStack.arguments!!.getString("initialText") ?: ""
                         ChatScreen(
                             token = t,
                             staffUserId = userId,
@@ -183,6 +212,7 @@ class MainActivity : ComponentActivity() {
                             onOpenProduct = { productId, imageIndex ->
                                 navController.navigate("product/$productId?imageIndex=$imageIndex")
                             },
+                            initialText = initialText,
                         )
                     }
                 }

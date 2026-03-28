@@ -52,6 +52,8 @@ fun ProductDetailScreen(
     scrollToCommentId: Int? = null,
     initialImagePage: Int = 0,
     onGoToChat: (() -> Unit)? = null,
+    onGoToChats: ((pendingText: String) -> Unit)? = null,
+    categoryName: String = "",
 ) {
     var product by remember { mutableStateOf<ProductDetail?>(null) }
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
@@ -86,8 +88,8 @@ fun ProductDetailScreen(
         if (commentIndex < 0) return@LaunchedEffect
         val hasImages = product!!.images.isNotEmpty() || product!!.cover_url != null
         val hasDescription = product!!.description.isNotBlank()
-        // Индексы: gallery(1) + description(0/1) + header(1) + commentIndex
-        val targetIndex = (if (hasImages) 1 else 0) + (if (hasDescription) 1 else 0) + 1 + commentIndex
+        // Индексы: title(1) + gallery(1) + description(0/1) + header(1) + commentIndex
+        val targetIndex = 1 + (if (hasImages) 1 else 0) + (if (hasDescription) 1 else 0) + 1 + commentIndex
         listState.animateScrollToItem(targetIndex)
     }
 
@@ -105,7 +107,7 @@ fun ProductDetailScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(product?.name ?: "") },
+                    title = { Text(if (categoryName.isNotBlank()) categoryName else (product?.name ?: "")) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
@@ -136,7 +138,9 @@ fun ProductDetailScreen(
 
                         // Страница из диалога: null = диалог закрыт
                         var chatDialogPage by remember { mutableStateOf<Int?>(null) }
+                        var staffChatDialogPage by remember { mutableStateOf<Int?>(null) }
 
+                        // Диалог для обычного пользователя
                         chatDialogPage?.let { page ->
                             AlertDialog(
                                 onDismissRequest = { chatDialogPage = null },
@@ -163,6 +167,26 @@ fun ProductDetailScreen(
                             )
                         }
 
+                        // Диалог для staff
+                        staffChatDialogPage?.let { page ->
+                            AlertDialog(
+                                onDismissRequest = { staffChatDialogPage = null },
+                                text = { Text("В чат с этим товаром?") },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        staffChatDialogPage = null
+                                        onGoToChats?.invoke("[product:$productId:$page]")
+                                    }) { Text("Да") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = {
+                                        staffChatDialogPage = null
+                                        onGoToChats?.invoke("")
+                                    }) { Text("Нет, просто в чат") }
+                                },
+                            )
+                        }
+
                         PullToRefreshBox(
                             isRefreshing = isRefreshing,
                             onRefresh = {
@@ -182,6 +206,16 @@ fun ProductDetailScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                            // Название товара
+                            item {
+                                Text(
+                                    text = product!!.name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+                                )
+                            }
+
                             // Галерея
                             item {
                                 if (images.isNotEmpty()) {
@@ -189,9 +223,11 @@ fun ProductDetailScreen(
                                         images = images,
                                         initialPage = initialImagePage,
                                         onFullscreen = { url -> fullscreenUrl = url },
-                                        onChatButtonClick = if (onGoToChat != null && !isStaff) {
-                                            { page -> chatDialogPage = page }
-                                        } else null,
+                                        onChatButtonClick = when {
+                                            onGoToChat != null && !isStaff -> { page -> chatDialogPage = page }
+                                            onGoToChats != null && isStaff -> { page -> staffChatDialogPage = page }
+                                            else -> null
+                                        },
                                     )
                                 }
                             }

@@ -45,6 +45,7 @@ fun ChatScreen(
     chatTitle: String,
     onBack: () -> Unit,
     onOpenProduct: ((productId: Int, imageIndex: Int) -> Unit)? = null,
+    initialText: String = "",
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -52,7 +53,7 @@ fun ChatScreen(
     val chatUserId = staffUserId ?: 0
 
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
-    var inputText by remember { mutableStateOf("") }
+    var inputText by remember { mutableStateOf(initialText) }
     var sending by remember { mutableStateOf(false) }
     var hasHistory by remember { mutableStateOf(false) }   // есть ли что грузить выше
     var loadingHistory by remember { mutableStateOf(false) }
