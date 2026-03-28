@@ -7,6 +7,12 @@ import retrofit2.http.*
 import java.util.concurrent.TimeUnit
 
 interface ApiService {
+    @GET("api/search/")
+    suspend fun search(
+        @Header("Authorization") token: String,
+        @Query("q") query: String,
+    ): List<SearchResult>
+
     @GET("api/categories/")
     suspend fun getCategories(): List<Category>
 

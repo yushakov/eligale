@@ -78,6 +78,18 @@ data class StaffComment(
     val created_at: String,
 )
 
+data class SearchResult(
+    val type: String,           // "comment" or "message"
+    val id: Int,
+    val snippet: String,
+    val created_at: String,
+    val product_id: Int? = null,
+    val product_name: String? = null,
+    val author: String? = null,
+    val chat_user_id: Int? = null,
+    val user_email: String? = null,
+)
+
 data class RequestCodeBody(val email: String)
 data class VerifyCodeBody(val email: String, val code: String)
 data class TokenResponse(val token: String, val has_name: Boolean)

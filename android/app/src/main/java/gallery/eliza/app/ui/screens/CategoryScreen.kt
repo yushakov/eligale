@@ -37,6 +37,7 @@ fun CategoryScreen(
     onChatClick: () -> Unit,
     onChatsClick: () -> Unit,
     onCommentsClick: () -> Unit,
+    onSearchClick: () -> Unit,
     isStaff: Boolean,
 ) {
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
@@ -157,6 +158,10 @@ fun CategoryScreen(
                                         trailingIcon = if (unreadCount > 0) {{ RedDot() }} else null,
                                     )
                                 }
+                                DropdownMenuItem(
+                                    text = { Text("Поиск") },
+                                    onClick = { showMenu = false; onSearchClick() },
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Аккаунт") },
                                     onClick = { showMenu = false; showAccount = true },

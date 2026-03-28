@@ -78,6 +78,7 @@ fun ChatScreen(
     onHome: () -> Unit = {},
     onOpenProduct: ((productId: Int, imageIndex: Int) -> Unit)? = null,
     initialText: String = "",
+    targetMessageId: Int? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -91,6 +92,7 @@ fun ChatScreen(
     var hasHistory by remember { mutableStateOf(false) }   // есть ли что грузить выше
     var atBeginning by remember { mutableStateOf(false) }  // дошли до начала переписки
     var loadingHistory by remember { mutableStateOf(false) }
+    var targetScrolled by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -167,6 +169,17 @@ fun ChatScreen(
             }
             // При ошибке сети показываем кнопку если есть что пробовать грузить
             if (afterId == null && messages.isNotEmpty()) hasHistory = true
+        }
+    }
+
+    // Прокрутка к целевому сообщению из поиска (один раз, после загрузки)
+    LaunchedEffect(messages) {
+        if (targetMessageId == null || targetScrolled || messages.isEmpty()) return@LaunchedEffect
+        val idx = messages.indexOfFirst { it.id == targetMessageId }
+        if (idx >= 0) {
+            val headerOffset = if (hasHistory || atBeginning) 1 else 0
+            listState.scrollToItem(idx + headerOffset)
+            targetScrolled = true
         }
     }
 

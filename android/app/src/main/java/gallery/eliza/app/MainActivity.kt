@@ -25,6 +25,7 @@ import gallery.eliza.app.ui.screens.ChatScreen
 import gallery.eliza.app.ui.screens.CommentListScreen
 import gallery.eliza.app.ui.screens.ProductDetailScreen
 import gallery.eliza.app.ui.screens.ProductListScreen
+import gallery.eliza.app.ui.screens.SearchScreen
 import gallery.eliza.app.ui.theme.ElizaGalleryTheme
 import kotlinx.coroutines.launch
 
@@ -84,6 +85,7 @@ class MainActivity : ComponentActivity() {
                             onChatClick = { navController.navigate("chat") },
                             onChatsClick = { navController.navigate("chats") },
                             onCommentsClick = { navController.navigate("comments") },
+                            onSearchClick = { navController.navigate("search") },
                             isStaff = isStaff,
                         )
                     }
@@ -149,9 +151,34 @@ class MainActivity : ComponentActivity() {
                             onHome = { navController.popBackStack("categories", false) },
                         )
                     }
-                    // Чат пользователя
-                    composable("chat") {
+                    // Поиск
+                    composable("search") {
                         val t = token ?: return@composable
+                        SearchScreen(
+                            token = t,
+                            onBack = { navController.popBackStack() },
+                            onHome = { navController.popBackStack("categories", false) },
+                            onOpenResult = { result ->
+                                when (result.type) {
+                                    "comment" -> navController.navigate("product/${result.product_id}?commentId=${result.id}")
+                                    "message" -> if (isStaff) {
+                                        navController.navigate("chat_staff/${result.chat_user_id}?email=${Uri.encode(result.user_email ?: "")}&targetMessageId=${result.id}")
+                                    } else {
+                                        navController.navigate("chat?targetMessageId=${result.id}")
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    // Чат пользователя
+                    composable(
+                        "chat?targetMessageId={targetMessageId}",
+                        arguments = listOf(
+                            navArgument("targetMessageId") { type = NavType.IntType; defaultValue = -1 },
+                        )
+                    ) { backStack ->
+                        val t = token ?: return@composable
+                        val targetMessageId = backStack.arguments!!.getInt("targetMessageId").takeIf { it != -1 }
                         ChatScreen(
                             token = t,
                             staffUserId = null,
@@ -161,6 +188,7 @@ class MainActivity : ComponentActivity() {
                             onOpenProduct = { productId, imageIndex ->
                                 navController.navigate("product/$productId?imageIndex=$imageIndex")
                             },
+                            targetMessageId = targetMessageId,
                         )
                     }
                     // Список комментариев (staff)
@@ -198,17 +226,19 @@ class MainActivity : ComponentActivity() {
                     }
                     // Чат staff с конкретным пользователем
                     composable(
-                        "chat_staff/{userId}?email={email}&initialText={initialText}",
+                        "chat_staff/{userId}?email={email}&initialText={initialText}&targetMessageId={targetMessageId}",
                         arguments = listOf(
                             navArgument("userId") { type = NavType.IntType },
                             navArgument("email") { defaultValue = "" },
                             navArgument("initialText") { defaultValue = "" },
+                            navArgument("targetMessageId") { type = NavType.IntType; defaultValue = -1 },
                         )
                     ) { backStack ->
                         val t = token ?: return@composable
                         val userId = backStack.arguments!!.getInt("userId")
                         val email = backStack.arguments!!.getString("email") ?: ""
                         val initialText = backStack.arguments!!.getString("initialText") ?: ""
+                        val targetMessageId = backStack.arguments!!.getInt("targetMessageId").takeIf { it != -1 }
                         ChatScreen(
                             token = t,
                             staffUserId = userId,
@@ -219,6 +249,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("product/$productId?imageIndex=$imageIndex")
                             },
                             initialText = initialText,
+                            targetMessageId = targetMessageId,
                         )
                     }
                 }
