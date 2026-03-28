@@ -1,5 +1,6 @@
 package gallery.eliza.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +33,7 @@ fun CommentListScreen(
 ) {
     var comments by remember { mutableStateOf<List<StaffComment>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var deleteConfirmId by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
 
     suspend fun load() {
@@ -48,6 +51,26 @@ fun CommentListScreen(
             delay(15_000)
             try { comments = Api.service.getStaffComments("Token $token") } catch (_: Exception) { }
         }
+    }
+
+    // Диалог подтверждения удаления
+    deleteConfirmId?.let { idToDelete ->
+        AlertDialog(
+            onDismissRequest = { deleteConfirmId = null },
+            text = { Text("Удалить комментарий?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteConfirmId = null
+                    scope.launch {
+                        try { Api.service.deleteStaffComment("Token $token", idToDelete) } catch (_: Exception) { }
+                        comments = comments.filter { it.id != idToDelete }
+                    }
+                }) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteConfirmId = null }) { Text("Отмена") }
+            }
+        )
     }
 
     Scaffold(
@@ -68,21 +91,69 @@ fun CommentListScreen(
                 comments.isEmpty() -> Text("Нет комментариев", Modifier.align(Alignment.Center))
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(comments, key = { it.id }) { comment ->
-                        CommentRow(
-                            comment = comment,
-                            onOpenChat = { onOpenChat(comment.user_id, comment.user_email) },
-                            onOpenProduct = {
-                                // Помечаем как прочитанный и переходим к товару
-                                scope.launch {
-                                    try { Api.service.markStaffCommentRead("Token $token", comment.id) } catch (_: Exception) { }
-                                    // Обновляем локально чтобы убрать жирность сразу
-                                    comments = comments.map {
-                                        if (it.id == comment.id) it.copy(is_read_by_staff = true) else it
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                when (value) {
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        // Свайп вправо — пометить прочитанным
+                                        if (!comment.is_read_by_staff) {
+                                            scope.launch {
+                                                try { Api.service.markStaffCommentRead("Token $token", comment.id) } catch (_: Exception) { }
+                                                comments = comments.map {
+                                                    if (it.id == comment.id) it.copy(is_read_by_staff = true) else it
+                                                }
+                                            }
+                                        }
+                                        false // не убирать из списка
                                     }
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        // Свайп влево — показать диалог удаления
+                                        deleteConfirmId = comment.id
+                                        false // snap back, удаление через диалог
+                                    }
+                                    else -> false
                                 }
-                                onOpenProduct(comment.product_id, comment.id)
-                            },
+                            }
                         )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50) // зелёный — прочитать
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error // красный — удалить
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(color)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd)
+                                        Alignment.CenterStart else Alignment.CenterEnd
+                                ) {
+                                    Text(
+                                        text = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) "✓ Прочитано" else "Удалить",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
+                        ) {
+                            CommentRow(
+                                comment = comment,
+                                onOpenChat = { onOpenChat(comment.user_id, comment.user_email) },
+                                onOpenProduct = {
+                                    scope.launch {
+                                        try { Api.service.markStaffCommentRead("Token $token", comment.id) } catch (_: Exception) { }
+                                        comments = comments.map {
+                                            if (it.id == comment.id) it.copy(is_read_by_staff = true) else it
+                                        }
+                                    }
+                                    onOpenProduct(comment.product_id, comment.id)
+                                },
+                            )
+                        }
                         HorizontalDivider()
                     }
                 }
@@ -103,6 +174,7 @@ private fun CommentRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onOpenProduct)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top,

@@ -78,12 +78,14 @@ fun CategoryScreen(
         }
     }
 
-    // Polling счётчика непрочитанных комментариев (только для staff) каждые 15 сек
+    // Polling непрочитанных комментариев (только для staff) — считаем из того же списка,
+    // что показывает CommentListScreen, чтобы бейдж точно совпадал с числом жирных строк
     LaunchedEffect(token, isStaff) {
         if (token == null || !isStaff) { unreadCommentCount = 0; return@LaunchedEffect }
         while (true) {
             try {
-                unreadCommentCount = Api.service.getStaffCommentsUnread("Token $token").unread
+                val list = Api.service.getStaffComments("Token $token")
+                unreadCommentCount = list.count { !it.is_read_by_staff }
             } catch (_: Exception) { }
             delay(15_000)
         }

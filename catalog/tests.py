@@ -627,3 +627,25 @@ class StaffCommentMarkReadTest(StaffCommentTestBase):
     def test_404_for_missing_comment(self):
         r = self.client.post('/api/staff/comments/99999/mark-read/', **self.staff_auth())
         self.assertEqual(r.status_code, 404)
+
+
+class StaffCommentDeleteTest(StaffCommentTestBase):
+    def test_requires_auth(self):
+        r = self.client.delete(f'/api/staff/comments/{self.comment.id}/delete/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_requires_staff(self):
+        r = self.client.delete(f'/api/staff/comments/{self.comment.id}/delete/', **self.user_auth())
+        self.assertEqual(r.status_code, 403)
+
+    def test_deletes_comment(self):
+        self.client.delete(f'/api/staff/comments/{self.comment.id}/delete/', **self.staff_auth())
+        self.assertFalse(Comment.objects.filter(pk=self.comment.id).exists())
+
+    def test_returns_204(self):
+        r = self.client.delete(f'/api/staff/comments/{self.comment.id}/delete/', **self.staff_auth())
+        self.assertEqual(r.status_code, 204)
+
+    def test_404_for_missing_comment(self):
+        r = self.client.delete('/api/staff/comments/99999/delete/', **self.staff_auth())
+        self.assertEqual(r.status_code, 404)

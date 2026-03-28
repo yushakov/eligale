@@ -162,6 +162,15 @@ def staff_comment_mark_read(request, comment_id):
     return Response({'ok': True})
 
 
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_comment_delete(request, comment_id):
+    comment = get_object_or_404(Comment, pk=comment_id)
+    comment.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 # ── Mobile views ──────────────────────────────────────────────────────────────
 
 PUBLIC_BASE = settings.YA_PUBLIC_UPLOADER_PUBLIC_BASE_URL.rstrip('/')

@@ -58,6 +58,12 @@ interface ApiService {
         @Path("id") commentId: Int,
     )
 
+    @DELETE("api/staff/comments/{id}/delete/")
+    suspend fun deleteStaffComment(
+        @Header("Authorization") token: String,
+        @Path("id") commentId: Int,
+    )
+
     // ── Чат (пользователь) ────────────────────────────────────────────────────
 
     @GET("api/chat/")
