@@ -272,32 +272,54 @@ fun ProductDetailScreen(
                                 }
                             } else {
                                 items(comments) { comment ->
-                                    Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                                        if (isStaff) {
+                                    val clipboard = LocalClipboardManager.current
+                                    var showCommentMenu by remember { mutableStateOf(false) }
+                                    Box {
+                                        Column(
+                                            Modifier
+                                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                                .pointerInput(Unit) {
+                                                    detectTapGestures(onLongPress = { showCommentMenu = true })
+                                                }
+                                        ) {
+                                            if (isStaff) {
+                                                Text(
+                                                    comment.author,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = BrownDark,
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                                    textDecoration = TextDecoration.Underline,
+                                                    modifier = Modifier.clickable {
+                                                        onOpenChat(comment.user_id, comment.user_email)
+                                                    }
+                                                )
+                                            } else {
+                                                Text(
+                                                    comment.author,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = Color.Black,
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                                )
+                                            }
                                             Text(
-                                                comment.author,
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = BrownDark,
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                                textDecoration = TextDecoration.Underline,
-                                                modifier = Modifier.clickable {
-                                                    onOpenChat(comment.user_id, comment.user_email)
+                                                comment.text,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = BrownDark
+                                            )
+                                            Spacer(Modifier.height(20.dp))
+                                        }
+                                        DropdownMenu(
+                                            expanded = showCommentMenu,
+                                            onDismissRequest = { showCommentMenu = false },
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Скопировать") },
+                                                onClick = {
+                                                    clipboard.setText(AnnotatedString("${comment.author}\n${comment.text}"))
+                                                    showCommentMenu = false
                                                 }
                                             )
-                                        } else {
-                                            Text(
-                                                comment.author,
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = Color.Black,
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                                            )
                                         }
-                                        Text(
-                                            comment.text,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = BrownDark
-                                        )
-                                        Spacer(Modifier.height(20.dp))
                                     }
                                 }
                             }
