@@ -203,6 +203,55 @@ python manage.py runserver 0.0.0.0:8000
 
 ## Запланировано на будущее
 
+### Копирование сообщений в чате (следующая задача)
+
+**Что нужно:**
+- Один тап по пузырьку сообщения → `DropdownMenu` с единственным пунктом "Скопировать"
+- Копируется `msg.text` целиком (включая маркеры `[image:...]`, `[product:...]`)
+- Вставка в поле ввода: `OutlinedTextField` в Android уже показывает системное меню "Вставить" при долгом нажатии — скорее всего работает из коробки, проверить до реализации
+
+**Детали реализации (Android, только ChatScreen.kt):**
+
+`MessageBubble` — добавить состояние и меню:
+```kotlin
+var showMenu by remember { mutableStateOf(false) }
+val clipboard = LocalClipboardManager.current
+
+Box(...) {
+    // существующий контент пузырька
+    Box(
+        modifier = Modifier
+            ...
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { showMenu = true })
+            }
+    ) { ... }
+
+    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+        DropdownMenuItem(
+            text = { Text("Скопировать") },
+            onClick = {
+                clipboard.setText(AnnotatedString(msg.text))
+                showMenu = false
+            }
+        )
+    }
+}
+```
+
+**Осторожно с двойным тапом:** у изображений в пузырьке уже стоит `detectTapGestures(onDoubleTap = ...)`. Если добавить `onTap` на весь пузырёк, он будет срабатывать и при одиночном тапе на картинку. Решение: на картинку навешивать оба — `onTap` (меню) и `onDoubleTap` (fullscreen) в одном `detectTapGestures`. На текстовую часть — только `onTap`.
+
+**Вставка:** проверить сначала нативное поведение `OutlinedTextField`. Если системное меню "Вставить" появляется при долгом нажатии — дополнительной реализации не нужно. Если нет — добавить `interactionSource` + `MutableInteractionSource` с детектом долгого нажатия и `LocalClipboardManager.current.getText()`.
+
+**Импорты которые понадобятся:**
+```kotlin
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors  // если кастомизировать
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+```
+
 ### Фоновый polling непрочитанных
 Сейчас счётчик непрочитанных сообщений обновляется только пока открыт `CategoryScreen`. Нужен механизм фонового обновления (WorkManager или foreground Service), чтобы бейдж обновлялся на любом экране.
 
