@@ -31,6 +31,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
@@ -383,12 +384,13 @@ fun ProductGallery(
 
         if (onChatButtonClick != null) {
             val currentPage = pagerState.currentPage
-            TextButton(
+            Button(
                 onClick = { onChatButtonClick(currentPage) },
-                modifier = Modifier.align(Alignment.BottomEnd),
-                colors = ButtonDefaults.textButtonColors(contentColor = BrownDark),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BrownDark),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             ) {
-                Text("В чат")
+                Text("В чат", color = Color.White, fontSize = 13.sp)
             }
         }
     }
@@ -443,7 +445,8 @@ private fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp),
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = BrownDark.copy(alpha = 0.7f)
             )
