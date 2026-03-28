@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -28,7 +29,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -58,6 +65,7 @@ private val BubbleStaff = Color(0xFFEAE0D5)
  */
 private val productLinkRegex = Regex("""\[product:(\d+):(\d+)\]""")
 private val imageLinkRegex = Regex("""\[image:(https?://[^\]]+)\]""")
+private val urlRegex = Regex("""https?://\S+""")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -356,7 +364,7 @@ private fun MessageBubble(
                     .background(bubbleColor, shape)
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .pointerInput(Unit) {
-                        detectTapGestures(onTap = { showMenu = true })
+                        detectTapGestures(onLongPress = { showMenu = true })
                     }
             ) {
                 Column {
@@ -371,7 +379,7 @@ private fun MessageBubble(
                                 .heightIn(max = 240.dp)
                                 .pointerInput(Unit) {
                                     detectTapGestures(
-                                        onTap = { showMenu = true },
+                                        onLongPress = { showMenu = true },
                                         onDoubleTap = { onImageDoubleTap?.invoke(imageUrl) },
                                     )
                                 }
@@ -379,7 +387,33 @@ private fun MessageBubble(
                         if (displayText.isNotBlank()) Spacer(Modifier.height(4.dp))
                     }
                     if (displayText.isNotBlank()) {
-                        Text(displayText, color = BrownDark, fontSize = 15.sp)
+                        val uriHandler = LocalUriHandler.current
+                        val annotated = buildAnnotatedString {
+                            var cursor = 0
+                            for (match in urlRegex.findAll(displayText)) {
+                                val url = match.value.trimEnd('.', ',', ')', ']', '!', ';', ':')
+                                append(displayText.substring(cursor, match.range.first))
+                                pushStringAnnotation("URL", url)
+                                withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
+                                    append(url)
+                                }
+                                pop()
+                                cursor = match.range.first + url.length
+                                if (match.range.last + 1 > cursor) {
+                                    append(displayText.substring(cursor, match.range.last + 1))
+                                }
+                                cursor = match.range.last + 1
+                            }
+                            if (cursor < displayText.length) append(displayText.substring(cursor))
+                        }
+                        ClickableText(
+                            text = annotated,
+                            style = TextStyle(color = BrownDark, fontSize = 15.sp),
+                            onClick = { offset ->
+                                annotated.getStringAnnotations("URL", offset, offset)
+                                    .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                            }
+                        )
                     }
                     if (productMatch != null && onOpenProduct != null) {
                         val productId = productMatch.groupValues[1].toInt()
