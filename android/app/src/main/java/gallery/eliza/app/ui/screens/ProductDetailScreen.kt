@@ -29,7 +29,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -443,6 +445,7 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
     }
 
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
 
     Box(
         modifier = Modifier
@@ -468,26 +471,34 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
                 .transformable(state = transformState)
         )
 
-        Button(
-            onClick = {
-                val fileName = url.substringAfterLast("/").substringBefore("?")
-                    .ifBlank { "image.jpg" }
-                val request = DownloadManager.Request(Uri.parse(url))
-                    .setTitle(fileName)
-                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                val dm = context.getSystemService(DownloadManager::class.java)
-                dm.enqueue(request)
-            },
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = BrownDark.copy(alpha = 0.7f)
-            )
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Скачать")
+            Button(
+                onClick = {
+                    val fileName = url.substringAfterLast("/").substringBefore("?")
+                        .ifBlank { "image.jpg" }
+                    val request = DownloadManager.Request(Uri.parse(url))
+                        .setTitle(fileName)
+                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    val dm = context.getSystemService(DownloadManager::class.java)
+                    dm.enqueue(request)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.7f))
+            ) {
+                Text("Скачать")
+            }
+            Button(
+                onClick = { clipboard.setText(AnnotatedString(url)) },
+                colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.7f))
+            ) {
+                Text("Копировать ссылку")
+            }
         }
     }
 }
