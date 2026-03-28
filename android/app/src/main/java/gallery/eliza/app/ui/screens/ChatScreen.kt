@@ -77,6 +77,7 @@ fun ChatScreen(
     var sending by remember { mutableStateOf(false) }
     var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
     var hasHistory by remember { mutableStateOf(false) }   // есть ли что грузить выше
+    var atBeginning by remember { mutableStateOf(false) }  // дошли до начала переписки
     var loadingHistory by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
@@ -119,9 +120,7 @@ fun ChatScreen(
 
         val local = dao.getAll(chatUserId).map { it.toModel() }
         messages = local
-
-        val minId = dao.minId(chatUserId)
-        hasHistory = (minId != null)   // если база не пуста — возможно, есть история выше
+        atBeginning = false
 
         // Подгружаем новые сообщения (после последнего известного)
         val afterId = dao.maxId(chatUserId)
@@ -139,10 +138,23 @@ fun ChatScreen(
             } else if (isFirstLoad && messages.isNotEmpty()) {
                 listState.scrollToItem(messages.size - 1)
             }
+            // Кнопка "Загрузить историю" нужна только если:
+            // - при первом открытии (afterId=null) сервер вернул полную страницу — значит есть более ранние
+            // - при повторных открытиях (afterId!=null) оставляем hasHistory как есть (пользователь мог
+            //   грузить историю раньше и теперь в БД есть сообщения, но не все)
+            if (afterId == null) {
+                hasHistory = fresh.size >= 50
+            } else if (!hasHistory) {
+                // Если мы никогда не видели кнопку, но в БД есть сообщения — возможно, история была
+                // загружена в предыдущих сессиях, но не до конца
+                hasHistory = dao.minId(chatUserId) != null
+            }
         } catch (_: Exception) {
             if (isFirstLoad && messages.isNotEmpty()) {
                 listState.scrollToItem(messages.size - 1)
             }
+            // При ошибке сети показываем кнопку если есть что пробовать грузить
+            if (afterId == null && messages.isNotEmpty()) hasHistory = true
         }
     }
 
@@ -238,8 +250,19 @@ fun ChatScreen(
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // Кнопка "Загрузить историю" вверху
-            if (hasHistory) {
+            // Начало переписки или кнопка "Загрузить историю"
+            if (atBeginning) {
+                item {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "Начало переписки",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+            } else if (hasHistory) {
                 item {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         if (loadingHistory) {
@@ -257,10 +280,14 @@ fun ChatScreen(
                                         }
                                         if (older.isEmpty()) {
                                             hasHistory = false
+                                            atBeginning = true
                                         } else {
                                             dao.insertAll(older.map { it.toEntity(chatUserId) })
                                             messages = dao.getAll(chatUserId).map { it.toModel() }
-                                            if (older.size < 50) hasHistory = false
+                                            if (older.size < 50) {
+                                                hasHistory = false
+                                                atBeginning = true
+                                            }
                                         }
                                     } catch (_: Exception) { }
                                     loadingHistory = false
