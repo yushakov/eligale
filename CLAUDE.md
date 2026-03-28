@@ -101,6 +101,7 @@ ChatMessage: chat (FK), sender (FK → User), text, is_read, created_at
 - `GET /api/products/<id>/` — детальная карточка товара
 - `GET /api/products/<id>/comments/` — комментарии; включает `user_id` и `user_email` (для staff-навигации в чат)
 - `POST /api/products/<id>/comments/` — добавить комментарий (требует токен)
+- `GET /api/search/?q=...` — поиск по комментариям и сообщениям чата (требует токен); сниппет ±80 символов вокруг совпадения; макс. 100 результатов, сортировка по дате; staff видит все чаты, пользователь — только свой
 - `POST /api/auth/request-code/` — отправить 6-значный код на email
 - `POST /api/auth/verify-code/` — проверить код, вернуть token + has_name
 - `POST /api/auth/set-name/` — сохранить display_name (требует токен)
@@ -133,11 +134,13 @@ ChatMessage: chat (FK), sender (FK → User), text, is_read, created_at
 ## Android
 - Экраны: CategoryScreen → ProductListScreen → ProductDetailScreen
 - Чат: CategoryScreen → ChatScreen (пользователь) или ChatListScreen → ChatScreen (staff)
-- **CategoryScreen**: плитка 2 колонки, круглые обложки с мягкими краями (radial gradient), название + "товаров: N" в полупрозрачном прямоугольнике поверх нижней четверти круга. Кнопка "Чат" (пользователь) или "Чаты" (staff) с бейджем непрочитанных. Polling счётчика каждые 15 сек (пока CategoryScreen активен).
+- **Навигация**: на всех экранах кроме CategoryScreen — кнопка домика (🏠) в TopAppBar, ведёт сразу на CategoryScreen (`popBackStack("categories", false)`).
+- **CategoryScreen**: плитка 2 колонки, круглые обложки с мягкими краями (radial gradient), название + "товаров: N" в полупрозрачном прямоугольнике поверх нижней четверти круга. TopAppBar содержит кнопку "Меню" (dropdown): для залогиненных — Чат/Чаты (с красной точкой если есть непрочитанные), Комменты (staff, с красной точкой), Поиск, Аккаунт; для незалогиненных — Войти. Красная точка на "Меню" если хоть что-то непрочитано. Polling счётчиков каждые 15 сек (пока CategoryScreen активен).
 - **ProductListScreen**: сетка 4 колонки, квадратные фото, оверлей "N фото" снизу слева
-- **ProductDetailScreen**: название товара над галереей (жирно, мелко). TopAppBar показывает название категории. Кнопка "В чат" на каждом фото галереи: для пользователя — диалог "Вас интересует данный продукт?" (Да/Нет, просто в чат), "Да" отправляет сообщение `"Интересует товар «name» (фото N)\n[product:id:page]"` и переходит в чат; для staff — диалог "В чат с этим товаром?" (Да/Нет), "Да" предзаполняет `[product:id:page]` в поле ввода выбранного чата. Двойной тап → fullscreen с зумом и "Скачать" (DownloadManager). Кнопка "Скачать" поднята над навигационной панелью (`navigationBarsPadding`). Для staff: имена авторов комментариев — кликабельные ссылки в чат. Кнопка "Назад" ведёт в категорию (не в чат).
-- **ChatScreen**: универсальный (пользователь и staff). Polling новых сообщений каждые 5 сек. Кнопка "Загрузить историю" вверху (показывается если первый запрос вернул ≥50 сообщений); после загрузки всей истории — текст "Начало переписки". Сообщения в Room `chat_messages` с полем `chat_user_id` (0 = свой чат, >0 = staff смотрит чат юзера X — изоляция по пользователю). Поддержка медиа: кнопка 🖼 открывает галерею, фото сжимается в JPEG 85%, загружается PUT напрямую в Яндекс (presign), отправляется как `[image:url]`. Сообщения с `[image:url]` рендерятся как изображение (Coil), двойной тап → fullscreen (переиспользует `FullscreenImageViewer` из ProductDetailScreen). Сообщения с `[product:id:page]` рендерятся с тапабельной ссылкой "→ Открыть товар". При открытии чата staff с продуктом — ссылка предзаполняется в поле ввода (`initialText`). Кнопка "Выйти" вызывает `POST /api/auth/logout/` перед очисткой локального токена.
+- **ProductDetailScreen**: название товара над галереей (жирно, мелко). TopAppBar показывает название категории. Кнопка "В чат" на каждом фото галереи: для пользователя — диалог "Вас интересует данный продукт?" (Да/Нет, просто в чат), "Да" отправляет сообщение `"Интересует товар «name» (фото N)\n[product:id:page]"` и переходит в чат; для staff — диалог "В чат с этим товаром?" (Да/Нет), "Да" предзаполняет `[product:id:page]` в поле ввода выбранного чата. Двойной тап → fullscreen с зумом, кнопки "Скачать" и "Копировать ссылку" внизу (`navigationBarsPadding`). Для staff: имена авторов комментариев — кликабельные ссылки в чат. Кнопка "Назад" ведёт в категорию (не в чат).
+- **ChatScreen**: универсальный (пользователь и staff). Polling новых сообщений каждые 5 сек. Кнопка "Загрузить историю" вверху (показывается если первый запрос вернул ≥50 сообщений); после загрузки всей истории — текст "Начало переписки". Сообщения в Room `chat_messages` с полем `chat_user_id` (0 = свой чат, >0 = staff смотрит чат юзера X — изоляция по пользователю). Поддержка медиа: кнопка 🖼 открывает галерею, фото сжимается в JPEG 85%, загружается PUT напрямую в Яндекс (presign), отправляется как `[image:url]`. Сообщения с `[image:url]` рендерятся как изображение (Coil), двойной тап → fullscreen. Сообщения с `[product:id:page]` рендерятся с тапабельной ссылкой "→ Открыть товар". URL в тексте (http/https) — кликабельные ссылки (открывают браузер). Долгое нажатие на пузырёк → меню "Скопировать" (копирует `msg.text` целиком). `initialText` предзаполняет поле ввода. `targetMessageId` — прокручивает к нужному сообщению после загрузки (используется при переходе из поиска).
 - **ChatListScreen**: только для staff. Список чатов с бейджами непрочитанных, сортировка по последнему сообщению. Polling каждые 15 сек.
+- **SearchScreen**: поиск по комментариям и сообщениям чата (только для залогиненных). Поле ввода + кнопка "Искать" (BrownDark). Результаты — карточки со сниппетом (±80 символов вокруг совпадения), совпадение выделено жирным (`buildAnnotatedString`). Тип результата (коммент/чат), подзаголовок (товар·автор или email), дата. Клик по комментарию → ProductDetailScreen с прокруткой к комментарию; клик по сообщению → ChatScreen с прокруткой к сообщению. Макс. 100 результатов, сортировка по дате (новые сверху).
 - AuthDialog: 3 шага — email → код → имя (шаг 3 только при первом входе)
 - TokenStorage: токен в SharedPreferences
 - Room: `ChatDatabase` (ChatMessageEntity, ChatMessageDao) в `data/ChatDatabase.kt`, версия 2, `fallbackToDestructiveMigration()`
@@ -194,6 +197,7 @@ python manage.py runserver 0.0.0.0:8000
 - **V1** ✅: каталог с изображениями, мобильный интерфейс управления
 - **V2** ✅: комментарии, регистрация через email, display_name, текстовый чат
 - **V2.5** ✅: фото в чате (публичный бакет, папка `chat/`), кнопка "В чат" на товарах, fullscreen фото в чате, server-side logout
+- **V2.6** ✅: копирование сообщений (долгое нажатие), активные ссылки в чате, "Меню" dropdown, кнопка домой на всех экранах, "Копировать ссылку" в fullscreen, экран поиска
 - **V3**: голосовые в чате (приватный бакет), шеринг товаров (App Links)
 
 ## Авторизация — важные нюансы
@@ -202,55 +206,6 @@ python manage.py runserver 0.0.0.0:8000
 - Staff-аккаунты защищены от удаления через API (403).
 
 ## Запланировано на будущее
-
-### Копирование сообщений в чате (следующая задача)
-
-**Что нужно:**
-- Один тап по пузырьку сообщения → `DropdownMenu` с единственным пунктом "Скопировать"
-- Копируется `msg.text` целиком (включая маркеры `[image:...]`, `[product:...]`)
-- Вставка в поле ввода: `OutlinedTextField` в Android уже показывает системное меню "Вставить" при долгом нажатии — скорее всего работает из коробки, проверить до реализации
-
-**Детали реализации (Android, только ChatScreen.kt):**
-
-`MessageBubble` — добавить состояние и меню:
-```kotlin
-var showMenu by remember { mutableStateOf(false) }
-val clipboard = LocalClipboardManager.current
-
-Box(...) {
-    // существующий контент пузырька
-    Box(
-        modifier = Modifier
-            ...
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { showMenu = true })
-            }
-    ) { ... }
-
-    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-        DropdownMenuItem(
-            text = { Text("Скопировать") },
-            onClick = {
-                clipboard.setText(AnnotatedString(msg.text))
-                showMenu = false
-            }
-        )
-    }
-}
-```
-
-**Осторожно с двойным тапом:** у изображений в пузырьке уже стоит `detectTapGestures(onDoubleTap = ...)`. Если добавить `onTap` на весь пузырёк, он будет срабатывать и при одиночном тапе на картинку. Решение: на картинку навешивать оба — `onTap` (меню) и `onDoubleTap` (fullscreen) в одном `detectTapGestures`. На текстовую часть — только `onTap`.
-
-**Вставка:** проверить сначала нативное поведение `OutlinedTextField`. Если системное меню "Вставить" появляется при долгом нажатии — дополнительной реализации не нужно. Если нет — добавить `interactionSource` + `MutableInteractionSource` с детектом долгого нажатия и `LocalClipboardManager.current.getText()`.
-
-**Импорты которые понадобятся:**
-```kotlin
-import androidx.compose.foundation.text.selection.LocalTextSelectionColors  // если кастомизировать
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-```
 
 ### Фоновый polling непрочитанных
 Сейчас счётчик непрочитанных сообщений обновляется только пока открыт `CategoryScreen`. Нужен механизм фонового обновления (WorkManager или foreground Service), чтобы бейдж обновлялся на любом экране.
@@ -269,6 +224,11 @@ import androidx.compose.material3.DropdownMenuItem
 Фото в чате реализованы (V2.5, публичный бакет папка `chat/`). Голосовые — ещё нет. Разметка: `[voice:key]`. Загрузка через приватный бакет. По тапу "🎙 Голосовое" загружать и воспроизводить.
 
 ### Навигационные маршруты Android (важно для расширения)
+- `"categories"` — главный экран
+- `"products/{categoryId}?name={name}"`
 - `"product/{productId}?categoryId={categoryId}&categoryName={categoryName}&commentId={commentId}&imageIndex={imageIndex}"`
+- `"chat?targetMessageId={targetMessageId}"` — чат пользователя, опциональный скролл к сообщению
 - `"chats?pendingText={pendingText}"` — staff список чатов с опциональным предзаполненным текстом
-- `"chat_staff/{userId}?email={email}&initialText={initialText}"` — чат staff с предзаполненным полем ввода
+- `"chat_staff/{userId}?email={email}&initialText={initialText}&targetMessageId={targetMessageId}"` — чат staff
+- `"comments"` — список комментариев (staff)
+- `"search"` — экран поиска (только залогиненные)
