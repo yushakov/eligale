@@ -106,6 +106,9 @@ fun CategoryScreen(
         AccountDialog(
             token = token,
             onSignOut = {
+                scope.launch {
+                    try { Api.service.logout("Token $token") } catch (_: Exception) { }
+                }
                 onTokenChange(null)
                 showAccount = false
             },

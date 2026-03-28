@@ -41,6 +41,9 @@ interface ApiService {
     @GET("api/auth/profile/")
     suspend fun getProfile(@Header("Authorization") token: String): UserProfile
 
+    @POST("api/auth/logout/")
+    suspend fun logout(@Header("Authorization") token: String)
+
     @DELETE("api/auth/delete-account/")
     suspend fun deleteAccount(@Header("Authorization") token: String)
 

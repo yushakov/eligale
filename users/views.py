@@ -114,6 +114,17 @@ def profile(request):
     return Response({'email': user.email, 'display_name': user.display_name or '', 'is_staff': user.is_staff})
 
 
+@api_view(['POST'])
+def logout(request):
+    auth = TokenAuthentication()
+    try:
+        _, token = auth.authenticate(request)
+    except Exception:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+    token.delete()
+    return Response({'ok': True})
+
+
 @api_view(['DELETE'])
 def delete_account(request):
     auth = TokenAuthentication()
