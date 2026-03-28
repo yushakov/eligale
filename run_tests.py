@@ -18,5 +18,5 @@ from django.conf import settings
 
 runner_class = get_runner(settings)
 runner = runner_class(verbosity=2, keepdb=False)
-failures = runner.run_tests(['catalog.tests', 'users.tests', 'uploader.tests'])
+failures = runner.run_tests(['catalog.tests', 'chat.tests', 'main.tests', 'users.tests', 'uploader.tests'])
 sys.exit(bool(failures))
