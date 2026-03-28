@@ -317,6 +317,73 @@ fun ProductDetailScreen(
     }
 }
 
+/**
+ * Галерея изображений товара. Отдельный composable, чтобы pagerState жил на правильном уровне
+ * и его можно было тестировать в изоляции.
+ *
+ * @param images список фотографий
+ * @param initialPage начальная страница (например, когда открываем конкретное фото из чата)
+ * @param onFullscreen двойной тап → полноэкранный просмотр
+ * @param onChatButtonClick если передан — показывает кнопку "В чат"; вызывается с текущей страницей
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun ProductGallery(
+    images: List<gallery.eliza.app.data.ProductImage>,
+    initialPage: Int = 0,
+    onFullscreen: (url: String) -> Unit,
+    onChatButtonClick: ((page: Int) -> Unit)? = null,
+) {
+    val safeInitialPage = initialPage.coerceIn(0, (images.size - 1).coerceAtLeast(0))
+    val pagerState = rememberPagerState(
+        initialPage = safeInitialPage,
+        pageCount = { images.size },
+    )
+
+    Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            AsyncImage(
+                model = images[page].image_url,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                images[page].image_url?.let { onFullscreen(it) }
+                            }
+                        )
+                    }
+            )
+        }
+
+        if (images.size > 1) {
+            Text(
+                text = "${pagerState.currentPage + 1} / ${images.size}",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(8.dp)
+            )
+        }
+
+        if (onChatButtonClick != null) {
+            val currentPage = pagerState.currentPage
+            TextButton(
+                onClick = { onChatButtonClick(currentPage) },
+                modifier = Modifier.align(Alignment.BottomEnd),
+                colors = ButtonDefaults.textButtonColors(contentColor = BrownDark),
+            ) {
+                Text("В чат")
+            }
+        }
+    }
+}
+
 @Composable
 private fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
