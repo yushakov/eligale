@@ -433,7 +433,7 @@ fun ProductGallery(
 }
 
 @Composable
-private fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
+fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 

@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.input.pointer.pointerInput
 import coil.compose.AsyncImage
 import gallery.eliza.app.data.*
 import gallery.eliza.app.ui.theme.BrownDark
@@ -73,6 +75,7 @@ fun ChatScreen(
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var inputText by remember { mutableStateOf(initialText) }
     var sending by remember { mutableStateOf(false) }
+    var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
     var hasHistory by remember { mutableStateOf(false) }   // есть ли что грузить выше
     var loadingHistory by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -164,6 +167,7 @@ fun ChatScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -274,12 +278,18 @@ fun ChatScreen(
                     msg = msg,
                     isOwnMessage = if (staffUserId == null) !msg.is_staff else msg.is_staff,
                     onOpenProduct = onOpenProduct,
+                    onImageDoubleTap = { url -> fullscreenImageUrl = url },
                 )
             }
 
             item { Spacer(Modifier.height(4.dp)) }
         }
     }
+
+    fullscreenImageUrl?.let { url ->
+        FullscreenImageViewer(url = url, onDismiss = { fullscreenImageUrl = null })
+    }
+    } // Box
 }
 
 @Composable
@@ -287,6 +297,7 @@ private fun MessageBubble(
     msg: ChatMessage,
     isOwnMessage: Boolean,
     onOpenProduct: ((productId: Int, imageIndex: Int) -> Unit)? = null,
+    onImageDoubleTap: ((url: String) -> Unit)? = null,
 ) {
     val alignment = if (isOwnMessage) Alignment.End else Alignment.Start
     val bubbleColor = if (isOwnMessage) BubbleUser else BubbleStaff
@@ -314,13 +325,19 @@ private fun MessageBubble(
         ) {
             Column {
                 if (imageMatch != null) {
+                    val imageUrl = imageMatch.groupValues[1]
                     AsyncImage(
-                        model = imageMatch.groupValues[1],
+                        model = imageUrl,
                         contentDescription = null,
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 240.dp)
+                            .pointerInput(Unit) {
+                                detectTapGestures(onDoubleTap = {
+                                    onImageDoubleTap?.invoke(imageUrl)
+                                })
+                            }
                     )
                     if (displayText.isNotBlank()) Spacer(Modifier.height(4.dp))
                 }
