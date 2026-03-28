@@ -44,6 +44,7 @@ fun CategoryScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var showAuth by remember { mutableStateOf(false) }
     var showAccount by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     var unreadCount by remember { mutableStateOf(0) }
@@ -125,38 +126,48 @@ fun CategoryScreen(
             TopAppBar(
                 title = { Text("Eliza Gallery") },
                 actions = {
-                    // Кнопка "Комменты" с красной точкой (только для staff)
-                    if (token != null && isStaff) {
-                        Box {
-                            TextButton(onClick = onCommentsClick) {
-                                Text("Комменты")
-                            }
-                            if (unreadCommentCount > 0) {
-                                RedDot(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 8.dp))
+                    val hasAnyUnread = unreadCount > 0 || unreadCommentCount > 0
+                    Box {
+                        TextButton(onClick = { showMenu = true }) {
+                            Text("Меню")
+                        }
+                        if (hasAnyUnread) {
+                            RedDot(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 8.dp))
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                        ) {
+                            if (token != null) {
+                                if (isStaff) {
+                                    DropdownMenuItem(
+                                        text = { Text("Чаты") },
+                                        onClick = { showMenu = false; onChatsClick() },
+                                        trailingIcon = if (unreadCount > 0) {{ RedDot() }} else null,
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Комменты") },
+                                        onClick = { showMenu = false; onCommentsClick() },
+                                        trailingIcon = if (unreadCommentCount > 0) {{ RedDot() }} else null,
+                                    )
+                                } else {
+                                    DropdownMenuItem(
+                                        text = { Text("Чат") },
+                                        onClick = { showMenu = false; onChatClick() },
+                                        trailingIcon = if (unreadCount > 0) {{ RedDot() }} else null,
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Аккаунт") },
+                                    onClick = { showMenu = false; showAccount = true },
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text("Войти") },
+                                    onClick = { showMenu = false; showAuth = true },
+                                )
                             }
                         }
-                    }
-                    // Кнопка чата с красной точкой
-                    if (token != null) {
-                        Box {
-                            TextButton(onClick = {
-                                if (isStaff) onChatsClick() else onChatClick()
-                            }) {
-                                Text(if (isStaff) "Чаты" else "Чат")
-                            }
-                            if (unreadCount > 0) {
-                                RedDot(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 8.dp))
-                            }
-                        }
-                    } else {
-                        TextButton(onClick = { showAuth = true }) {
-                            Text("Чат")
-                        }
-                    }
-                    TextButton(onClick = {
-                        if (token == null) showAuth = true else showAccount = true
-                    }) {
-                        Text(if (token == null) "Войти" else "Аккаунт")
                     }
                 }
             )
