@@ -12,6 +12,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
 
 class ChatListSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
     user_display_name = serializers.CharField(source='user.display_name', read_only=True)
     unread_count = serializers.SerializerMethodField()
@@ -19,7 +20,7 @@ class ChatListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Chat
-        fields = ['id', 'user_email', 'user_display_name', 'unread_count', 'last_message', 'last_message_at']
+        fields = ['id', 'user_id', 'user_email', 'user_display_name', 'unread_count', 'last_message', 'last_message_at']
 
     def get_unread_count(self, obj):
         # Для staff: непрочитанные сообщения от пользователя

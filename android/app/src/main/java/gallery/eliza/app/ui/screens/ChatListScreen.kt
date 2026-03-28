@@ -70,7 +70,7 @@ fun ChatListScreen(
                     items(chats, key = { it.id }) { chat ->
                         ChatListRow(
                             chat = chat,
-                            onClick = { onChatClick(chat.id, chat.user_email) }
+                            onClick = { onChatClick(chat.user_id, chat.user_email) }
                         )
                         HorizontalDivider()
                     }

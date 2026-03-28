@@ -214,8 +214,13 @@ class StaffChatListTest(ChatTestBase):
         self.make_chat(self.user)
         r = self.client.get('/api/chats/', **self.staff_auth())
         chat = r.json()[0]
-        for field in ['id', 'user_email', 'unread_count', 'last_message_at']:
+        for field in ['id', 'user_id', 'user_email', 'unread_count', 'last_message_at']:
             self.assertIn(field, chat)
+
+    def test_user_id_is_correct(self):
+        self.make_chat(self.user)
+        r = self.client.get('/api/chats/', **self.staff_auth())
+        self.assertEqual(r.json()[0]['user_id'], self.user.id)
 
     def test_unread_count_correct(self):
         chat = self.make_chat(self.user)

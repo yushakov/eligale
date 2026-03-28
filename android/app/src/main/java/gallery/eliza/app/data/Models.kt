@@ -56,6 +56,7 @@ data class UnreadCount(val unread: Int)
 
 data class ChatListItem(
     val id: Int,
+    val user_id: Int,
     val user_email: String,
     val user_display_name: String?,
     val unread_count: Int,
