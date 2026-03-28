@@ -45,6 +45,7 @@ fun ChatScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val dao = remember { ChatDatabase.get(context).messageDao() }
+    val chatUserId = staffUserId ?: 0
 
     var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var inputText by remember { mutableStateOf("") }
@@ -69,14 +70,14 @@ fun ChatScreen(
     LaunchedEffect(resumeKey) {
         val isFirstLoad = resumeKey == 0
 
-        val local = dao.getAll().map { it.toModel() }
+        val local = dao.getAll(chatUserId).map { it.toModel() }
         messages = local
 
-        val minId = dao.minId()
+        val minId = dao.minId(chatUserId)
         hasHistory = (minId != null)   // если база не пуста — возможно, есть история выше
 
         // Подгружаем новые сообщения (после последнего известного)
-        val afterId = dao.maxId()
+        val afterId = dao.maxId(chatUserId)
         try {
             val fresh = if (staffUserId == null) {
                 Api.service.getChatMessages(token = "Token $token", after = afterId)
@@ -84,9 +85,9 @@ fun ChatScreen(
                 Api.service.getStaffChatMessages(token = "Token $token", userId = staffUserId, after = afterId)
             }
             if (fresh.isNotEmpty()) {
-                dao.insertAll(fresh.map { it.toEntity() })
-                messages = dao.getAll().map { it.toModel() }
-                markRead(context, token, staffUserId, fresh.last().id, dao)
+                dao.insertAll(fresh.map { it.toEntity(chatUserId) })
+                messages = dao.getAll(chatUserId).map { it.toModel() }
+                markRead(context, token, staffUserId, fresh.last().id, dao, chatUserId)
                 listState.animateScrollToItem(messages.size - 1)
             } else if (isFirstLoad && messages.isNotEmpty()) {
                 listState.scrollToItem(messages.size - 1)
@@ -103,16 +104,16 @@ fun ChatScreen(
         while (true) {
             delay(5_000)
             try {
-                val afterId = dao.maxId()
+                val afterId = dao.maxId(chatUserId)
                 val fresh = if (staffUserId == null) {
                     Api.service.getChatMessages(token = "Token $token", after = afterId)
                 } else {
                     Api.service.getStaffChatMessages(token = "Token $token", userId = staffUserId, after = afterId)
                 }
                 if (fresh.isNotEmpty()) {
-                    dao.insertAll(fresh.map { it.toEntity() })
-                    messages = dao.getAll().map { it.toModel() }
-                    markRead(context, token, staffUserId, fresh.last().id, dao)
+                    dao.insertAll(fresh.map { it.toEntity(chatUserId) })
+                    messages = dao.getAll(chatUserId).map { it.toModel() }
+                    markRead(context, token, staffUserId, fresh.last().id, dao, chatUserId)
                     listState.animateScrollToItem(messages.size - 1)
                 }
             } catch (_: Exception) { }
@@ -160,8 +161,8 @@ fun ChatScreen(
                                 } else {
                                     Api.service.sendStaffChatMessage("Token $token", staffUserId, mapOf("text" to text))
                                 }
-                                dao.insertAll(listOf(msg.toEntity()))
-                                messages = dao.getAll().map { it.toModel() }
+                                dao.insertAll(listOf(msg.toEntity(chatUserId)))
+                                messages = dao.getAll(chatUserId).map { it.toModel() }
                                 inputText = ""
                                 listState.animateScrollToItem(messages.size - 1)
                             } catch (_: Exception) { }
@@ -194,7 +195,7 @@ fun ChatScreen(
                                 scope.launch {
                                     loadingHistory = true
                                     try {
-                                        val minId = dao.minId() ?: return@launch
+                                        val minId = dao.minId(chatUserId) ?: return@launch
                                         val older = if (staffUserId == null) {
                                             Api.service.getChatMessages(token = "Token $token", before = minId, limit = 50)
                                         } else {
@@ -203,8 +204,8 @@ fun ChatScreen(
                                         if (older.isEmpty()) {
                                             hasHistory = false
                                         } else {
-                                            dao.insertAll(older.map { it.toEntity() })
-                                            messages = dao.getAll().map { it.toModel() }
+                                            dao.insertAll(older.map { it.toEntity(chatUserId) })
+                                            messages = dao.getAll(chatUserId).map { it.toModel() }
                                             if (older.size < 50) hasHistory = false
                                         }
                                     } catch (_: Exception) { }
@@ -258,6 +259,7 @@ private suspend fun markRead(
     staffUserId: Int?,
     upToId: Int,
     dao: ChatMessageDao,
+    chatUserId: Int,
 ) {
     try {
         if (staffUserId == null) {
@@ -265,6 +267,6 @@ private suspend fun markRead(
         } else {
             Api.service.markStaffChatRead("Token $token", staffUserId, mapOf("up_to_id" to upToId))
         }
-        dao.markReadUpTo(upToId)
+        dao.markReadUpTo(chatUserId, upToId)
     } catch (_: Exception) { }
 }

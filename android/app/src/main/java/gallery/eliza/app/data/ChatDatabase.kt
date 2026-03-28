@@ -6,6 +6,7 @@ import androidx.room.*
 @Entity(tableName = "chat_messages")
 data class ChatMessageEntity(
     @PrimaryKey val id: Int,
+    val chat_user_id: Int,   // 0 = own chat (user mode), >0 = staff viewing that userId's chat
     val sender_email: String,
     val is_staff: Boolean,
     val text: String,
@@ -15,29 +16,23 @@ data class ChatMessageEntity(
 
 @Dao
 interface ChatMessageDao {
-    @Query("SELECT * FROM chat_messages ORDER BY id ASC")
-    suspend fun getAll(): List<ChatMessageEntity>
-
-    @Query("SELECT * FROM chat_messages WHERE id < :beforeId ORDER BY id DESC LIMIT :limit")
-    suspend fun getBefore(beforeId: Int, limit: Int = 50): List<ChatMessageEntity>
+    @Query("SELECT * FROM chat_messages WHERE chat_user_id = :chatUserId ORDER BY id ASC")
+    suspend fun getAll(chatUserId: Int): List<ChatMessageEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(messages: List<ChatMessageEntity>)
 
-    @Query("SELECT MIN(id) FROM chat_messages")
-    suspend fun minId(): Int?
+    @Query("SELECT MIN(id) FROM chat_messages WHERE chat_user_id = :chatUserId")
+    suspend fun minId(chatUserId: Int): Int?
 
-    @Query("SELECT MAX(id) FROM chat_messages")
-    suspend fun maxId(): Int?
+    @Query("SELECT MAX(id) FROM chat_messages WHERE chat_user_id = :chatUserId")
+    suspend fun maxId(chatUserId: Int): Int?
 
-    @Query("SELECT COUNT(*) FROM chat_messages")
-    suspend fun count(): Int
-
-    @Query("UPDATE chat_messages SET is_read = 1 WHERE id <= :upToId AND is_staff = 1")
-    suspend fun markReadUpTo(upToId: Int)
+    @Query("UPDATE chat_messages SET is_read = 1 WHERE chat_user_id = :chatUserId AND id <= :upToId AND is_staff = 1")
+    suspend fun markReadUpTo(chatUserId: Int, upToId: Int)
 }
 
-@Database(entities = [ChatMessageEntity::class], version = 1, exportSchema = false)
+@Database(entities = [ChatMessageEntity::class], version = 2, exportSchema = false)
 abstract class ChatDatabase : RoomDatabase() {
     abstract fun messageDao(): ChatMessageDao
 
@@ -50,13 +45,16 @@ abstract class ChatDatabase : RoomDatabase() {
                     context.applicationContext,
                     ChatDatabase::class.java,
                     "chat_db"
-                ).build().also { instance = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build().also { instance = it }
             }
     }
 }
 
-fun ChatMessage.toEntity() = ChatMessageEntity(
+fun ChatMessage.toEntity(chatUserId: Int) = ChatMessageEntity(
     id = id,
+    chat_user_id = chatUserId,
     sender_email = sender_email,
     is_staff = is_staff,
     text = text,
