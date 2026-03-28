@@ -2,6 +2,7 @@ package gallery.eliza.app.ui.screens
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,8 @@ private val BubbleStaff = Color(0xFFEAE0D5)
  * Для обычного пользователя: staffUserId = null, token — токен пользователя.
  * Для staff: staffUserId = id пользователя, token — токен сотрудника.
  */
+private val productLinkRegex = Regex("""\[product:(\d+):(\d+)\]""")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -41,6 +44,7 @@ fun ChatScreen(
     staffUserId: Int?,        // null = режим пользователя, Int = staff смотрит чат юзера
     chatTitle: String,
     onBack: () -> Unit,
+    onOpenProduct: ((productId: Int, imageIndex: Int) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -220,7 +224,11 @@ fun ChatScreen(
             }
 
             items(messages, key = { it.id }) { msg ->
-                MessageBubble(msg, isOwnMessage = if (staffUserId == null) !msg.is_staff else msg.is_staff)
+                MessageBubble(
+                    msg = msg,
+                    isOwnMessage = if (staffUserId == null) !msg.is_staff else msg.is_staff,
+                    onOpenProduct = onOpenProduct,
+                )
             }
 
             item { Spacer(Modifier.height(4.dp)) }
@@ -229,7 +237,11 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(msg: ChatMessage, isOwnMessage: Boolean) {
+private fun MessageBubble(
+    msg: ChatMessage,
+    isOwnMessage: Boolean,
+    onOpenProduct: ((productId: Int, imageIndex: Int) -> Unit)? = null,
+) {
     val alignment = if (isOwnMessage) Alignment.End else Alignment.Start
     val bubbleColor = if (isOwnMessage) BubbleUser else BubbleStaff
     val shape = if (isOwnMessage) {
@@ -237,6 +249,9 @@ private fun MessageBubble(msg: ChatMessage, isOwnMessage: Boolean) {
     } else {
         RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp)
     }
+
+    val productMatch = productLinkRegex.find(msg.text)
+    val displayText = if (productMatch != null) msg.text.replace(productMatch.value, "").trimEnd() else msg.text
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -248,7 +263,25 @@ private fun MessageBubble(msg: ChatMessage, isOwnMessage: Boolean) {
                 .background(bubbleColor, shape)
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Text(msg.text, color = BrownDark, fontSize = 15.sp)
+            Column {
+                Text(displayText, color = BrownDark, fontSize = 15.sp)
+                if (productMatch != null && onOpenProduct != null) {
+                    val productId = productMatch.groupValues[1].toInt()
+                    val imageIndex = productMatch.groupValues[2].toInt()
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "→ Открыть товар",
+                        color = BrownDark,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .clickable { onOpenProduct(productId, imageIndex) }
+                            .padding(vertical = 2.dp),
+                        style = androidx.compose.ui.text.TextStyle(
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                        )
+                    )
+                }
+            }
         }
     }
 }

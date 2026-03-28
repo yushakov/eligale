@@ -101,13 +101,15 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(
-                        "product/{productId}?commentId={commentId}",
+                        "product/{productId}?commentId={commentId}&imageIndex={imageIndex}",
                         arguments = listOf(
                             navArgument("productId") { type = NavType.IntType },
                             navArgument("commentId") { type = NavType.IntType; defaultValue = -1 },
+                            navArgument("imageIndex") { type = NavType.IntType; defaultValue = 0 },
                         )
                     ) { backStack ->
                         val commentId = backStack.arguments!!.getInt("commentId").takeIf { it != -1 }
+                        val imageIndex = backStack.arguments!!.getInt("imageIndex")
                         ProductDetailScreen(
                             productId = backStack.arguments!!.getInt("productId"),
                             onBack = { navController.popBackStack() },
@@ -118,6 +120,10 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("chat_staff/$userId?email=$userEmail")
                             },
                             scrollToCommentId = commentId,
+                            initialImagePage = imageIndex,
+                            onGoToChat = if (token != null && !isStaff) {
+                                { navController.navigate("chat") }
+                            } else null,
                         )
                     }
                     // Чат пользователя
@@ -128,6 +134,9 @@ class MainActivity : ComponentActivity() {
                             staffUserId = null,
                             chatTitle = "Чат с Елизаветой",
                             onBack = { navController.popBackStack() },
+                            onOpenProduct = { productId, imageIndex ->
+                                navController.navigate("product/$productId?imageIndex=$imageIndex")
+                            },
                         )
                     }
                     // Список комментариев (staff)
@@ -171,6 +180,9 @@ class MainActivity : ComponentActivity() {
                             staffUserId = userId,
                             chatTitle = email,
                             onBack = { navController.popBackStack() },
+                            onOpenProduct = { productId, imageIndex ->
+                                navController.navigate("product/$productId?imageIndex=$imageIndex")
+                            },
                         )
                     }
                 }

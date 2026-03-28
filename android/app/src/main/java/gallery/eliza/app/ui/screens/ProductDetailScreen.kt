@@ -49,6 +49,8 @@ fun ProductDetailScreen(
     isStaff: Boolean = false,
     onOpenChat: (userId: Int, userEmail: String) -> Unit = { _, _ -> },
     scrollToCommentId: Int? = null,
+    initialImagePage: Int = 0,
+    onGoToChat: (() -> Unit)? = null,
 ) {
     var product by remember { mutableStateOf<ProductDetail?>(null) }
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
@@ -131,6 +133,35 @@ fun ProductDetailScreen(
                             } ?: emptyList()
                         }
 
+                        // Страница из диалога: null = диалог закрыт
+                        var chatDialogPage by remember { mutableStateOf<Int?>(null) }
+
+                        chatDialogPage?.let { page ->
+                            AlertDialog(
+                                onDismissRequest = { chatDialogPage = null },
+                                text = { Text("Вас интересует данный продукт?") },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        chatDialogPage = null
+                                        val productName = product!!.name
+                                        scope.launch {
+                                            try {
+                                                val text = "Интересует товар «$productName» (фото ${page + 1})\n[product:$productId:$page]"
+                                                Api.service.sendChatMessage("Token ${token!!}", mapOf("text" to text))
+                                            } catch (_: Exception) { }
+                                            onGoToChat?.invoke()
+                                        }
+                                    }) { Text("Да") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = {
+                                        chatDialogPage = null
+                                        onGoToChat?.invoke()
+                                    }) { Text("Нет, просто в чат") }
+                                },
+                            )
+                        }
+
                         PullToRefreshBox(
                             isRefreshing = isRefreshing,
                             onRefresh = {
@@ -153,35 +184,14 @@ fun ProductDetailScreen(
                             // Галерея
                             item {
                                 if (images.isNotEmpty()) {
-                                    val pagerState = rememberPagerState(pageCount = { images.size })
-                                    Box {
-                                        HorizontalPager(
-                                            state = pagerState,
-                                            modifier = Modifier.fillMaxWidth().height(320.dp)
-                                        ) { page ->
-                                            AsyncImage(
-                                                model = images[page].image_url,
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Fit,
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .pointerInput(Unit) {
-                                                        detectTapGestures(
-                                                            onDoubleTap = {
-                                                                fullscreenUrl = images[page].image_url
-                                                            }
-                                                        )
-                                                    }
-                                            )
-                                        }
-                                        if (images.size > 1) {
-                                            Text(
-                                                text = "${pagerState.currentPage + 1} / ${images.size}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
-                                            )
-                                        }
-                                    }
+                                    ProductGallery(
+                                        images = images,
+                                        initialPage = initialImagePage,
+                                        onFullscreen = { url -> fullscreenUrl = url },
+                                        onChatButtonClick = if (onGoToChat != null && !isStaff) {
+                                            { page -> chatDialogPage = page }
+                                        } else null,
+                                    )
                                 }
                             }
 
