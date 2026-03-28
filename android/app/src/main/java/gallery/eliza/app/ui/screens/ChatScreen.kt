@@ -25,8 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -340,53 +342,71 @@ private fun MessageBubble(
     if (productMatch != null) displayText = displayText.replace(productMatch.value, "").trimEnd()
     if (imageMatch != null) displayText = displayText.replace(imageMatch.value, "").trimEnd()
 
+    var showMenu by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboardManager.current
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = alignment,
     ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .background(bubbleColor, shape)
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            Column {
-                if (imageMatch != null) {
-                    val imageUrl = imageMatch.groupValues[1]
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 240.dp)
-                            .pointerInput(Unit) {
-                                detectTapGestures(onDoubleTap = {
-                                    onImageDoubleTap?.invoke(imageUrl)
-                                })
-                            }
-                    )
-                    if (displayText.isNotBlank()) Spacer(Modifier.height(4.dp))
-                }
-                if (displayText.isNotBlank()) {
-                    Text(displayText, color = BrownDark, fontSize = 15.sp)
-                }
-                if (productMatch != null && onOpenProduct != null) {
-                    val productId = productMatch.groupValues[1].toInt()
-                    val imageIndex = productMatch.groupValues[2].toInt()
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "→ Открыть товар",
-                        color = BrownDark,
-                        fontSize = 13.sp,
-                        modifier = Modifier
-                            .clickable { onOpenProduct(productId, imageIndex) }
-                            .padding(vertical = 2.dp),
-                        style = androidx.compose.ui.text.TextStyle(
-                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+        Box {
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .background(bubbleColor, shape)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { showMenu = true })
+                    }
+            ) {
+                Column {
+                    if (imageMatch != null) {
+                        val imageUrl = imageMatch.groupValues[1]
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = { showMenu = true },
+                                        onDoubleTap = { onImageDoubleTap?.invoke(imageUrl) },
+                                    )
+                                }
                         )
-                    )
+                        if (displayText.isNotBlank()) Spacer(Modifier.height(4.dp))
+                    }
+                    if (displayText.isNotBlank()) {
+                        Text(displayText, color = BrownDark, fontSize = 15.sp)
+                    }
+                    if (productMatch != null && onOpenProduct != null) {
+                        val productId = productMatch.groupValues[1].toInt()
+                        val imageIndex = productMatch.groupValues[2].toInt()
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "→ Открыть товар",
+                            color = BrownDark,
+                            fontSize = 13.sp,
+                            modifier = Modifier
+                                .clickable { onOpenProduct(productId, imageIndex) }
+                                .padding(vertical = 2.dp),
+                            style = androidx.compose.ui.text.TextStyle(
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                            )
+                        )
+                    }
                 }
+            }
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text("Скопировать") },
+                    onClick = {
+                        clipboard.setText(AnnotatedString(msg.text))
+                        showMenu = false
+                    }
+                )
             }
         }
     }
