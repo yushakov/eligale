@@ -95,7 +95,7 @@ fun ProductDetailScreen(
         if (!initialFullscreenOpened && initialImagePage > 0 && product != null) {
             val imgs = product!!.images.ifEmpty {
                 product!!.cover_url?.let {
-                    listOf(gallery.eliza.app.data.ProductImage(0, it, 0))
+                    listOf(gallery.eliza.app.data.ProductImage(0, it, null, null, null, 0))
                 } ?: emptyList()
             }
             if (imgs.isNotEmpty()) {
@@ -161,7 +161,7 @@ fun ProductDetailScreen(
                     product != null -> {
                         val images = product!!.images.ifEmpty {
                             product!!.cover_url?.let {
-                                listOf(gallery.eliza.app.data.ProductImage(0, it, 0))
+                                listOf(gallery.eliza.app.data.ProductImage(0, it, null, null, null, 0))
                             } ?: emptyList()
                         }
 
@@ -438,7 +438,7 @@ fun ProductGallery(
                     val index = row * columns + col
                     if (index < images.size) {
                         AsyncImage(
-                            model = images[index].image_url,
+                            model = images[index].image_url_200 ?: images[index].image_url,
                             contentDescription = "Фото ${index + 1}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier

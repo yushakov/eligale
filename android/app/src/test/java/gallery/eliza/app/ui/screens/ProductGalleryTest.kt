@@ -25,7 +25,7 @@ class ProductGalleryTest {
 
     // image_url = null: Coil ничего не загружает, но UI-структура сохраняется
     private fun fakeImages(count: Int): List<ProductImage> =
-        List(count) { i -> ProductImage(id = i, image_url = null, order = i) }
+        List(count) { i -> ProductImage(id = i, image_url = null, image_url_100 = null, image_url_200 = null, image_url_300 = null, order = i) }
 
     // ──────────────────────────────────────────────────────────────────
     // Наличие элементов в сетке

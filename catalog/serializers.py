@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.conf import settings
 from .models import Category, Product, ProductImage, Comment
+from .thumbnails import thumbnail_key
 
 
 def _public_url(key):
@@ -27,13 +28,25 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ProductImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
+    image_url_100 = serializers.SerializerMethodField()
+    image_url_200 = serializers.SerializerMethodField()
+    image_url_300 = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductImage
-        fields = ['id', 'image_url', 'order']
+        fields = ['id', 'image_url', 'image_url_100', 'image_url_200', 'image_url_300', 'order']
 
     def get_image_url(self, obj):
         return _public_url(obj.image_key)
+
+    def get_image_url_100(self, obj):
+        return _public_url(thumbnail_key(obj.image_key, 100))
+
+    def get_image_url_200(self, obj):
+        return _public_url(thumbnail_key(obj.image_key, 200))
+
+    def get_image_url_300(self, obj):
+        return _public_url(thumbnail_key(obj.image_key, 300))
 
 
 class ProductListSerializer(serializers.ModelSerializer):

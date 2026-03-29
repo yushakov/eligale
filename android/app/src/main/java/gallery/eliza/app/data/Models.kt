@@ -17,7 +17,10 @@ data class Product(
 
 data class ProductImage(
     val id: Int,
-    val image_url: String?,
+    val image_url: String?,        // оригинал — для fullscreen
+    val image_url_100: String?,    // 100×100 — плитка товаров (4 колонки)
+    val image_url_200: String?,    // 200×200 — галерея товара (3 колонки)
+    val image_url_300: String?,    // 300×300 — обложки категорий
     val order: Int
 )
 
