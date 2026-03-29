@@ -221,12 +221,84 @@ fun ChatScreen(
                 }
             )
         },
-        bottomBar = {
+    ) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                // Начало переписки или кнопка "Загрузить историю"
+                if (atBeginning) {
+                    item {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text(
+                                "Начало переписки",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
+                } else if (hasHistory) {
+                    item {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (loadingHistory) {
+                                CircularProgressIndicator(Modifier.size(24.dp))
+                            } else {
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        loadingHistory = true
+                                        try {
+                                            val minId = dao.minId(chatUserId) ?: return@launch
+                                            val older = if (staffUserId == null) {
+                                                Api.service.getChatMessages(token = "Token $token", before = minId, limit = 50)
+                                            } else {
+                                                Api.service.getStaffChatMessages(token = "Token $token", userId = staffUserId, before = minId, limit = 50)
+                                            }
+                                            if (older.isEmpty()) {
+                                                hasHistory = false
+                                                atBeginning = true
+                                            } else {
+                                                dao.insertAll(older.map { it.toEntity(chatUserId) })
+                                                messages = dao.getAll(chatUserId).map { it.toModel() }
+                                                if (older.size < 50) {
+                                                    hasHistory = false
+                                                    atBeginning = true
+                                                }
+                                            }
+                                        } catch (_: Exception) { }
+                                        loadingHistory = false
+                                    }
+                                }) {
+                                    Text("Загрузить историю")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                items(messages, key = { it.id }) { msg ->
+                    MessageBubble(
+                        msg = msg,
+                        isOwnMessage = if (staffUserId == null) !msg.is_staff else msg.is_staff,
+                        onOpenProduct = onOpenProduct,
+                        onImageDoubleTap = { url -> fullscreenImageUrl = url },
+                    )
+                }
+
+                item { Spacer(Modifier.height(4.dp)) }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -270,76 +342,6 @@ fun ChatScreen(
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить", tint = BrownDark)
                 }
             }
-        }
-    ) { padding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            // Начало переписки или кнопка "Загрузить историю"
-            if (atBeginning) {
-                item {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Начало переписки",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-                }
-            } else if (hasHistory) {
-                item {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        if (loadingHistory) {
-                            CircularProgressIndicator(Modifier.size(24.dp))
-                        } else {
-                            TextButton(onClick = {
-                                scope.launch {
-                                    loadingHistory = true
-                                    try {
-                                        val minId = dao.minId(chatUserId) ?: return@launch
-                                        val older = if (staffUserId == null) {
-                                            Api.service.getChatMessages(token = "Token $token", before = minId, limit = 50)
-                                        } else {
-                                            Api.service.getStaffChatMessages(token = "Token $token", userId = staffUserId, before = minId, limit = 50)
-                                        }
-                                        if (older.isEmpty()) {
-                                            hasHistory = false
-                                            atBeginning = true
-                                        } else {
-                                            dao.insertAll(older.map { it.toEntity(chatUserId) })
-                                            messages = dao.getAll(chatUserId).map { it.toModel() }
-                                            if (older.size < 50) {
-                                                hasHistory = false
-                                                atBeginning = true
-                                            }
-                                        }
-                                    } catch (_: Exception) { }
-                                    loadingHistory = false
-                                }
-                            }) {
-                                Text("Загрузить историю")
-                            }
-                        }
-                    }
-                }
-            }
-
-            items(messages, key = { it.id }) { msg ->
-                MessageBubble(
-                    msg = msg,
-                    isOwnMessage = if (staffUserId == null) !msg.is_staff else msg.is_staff,
-                    onOpenProduct = onOpenProduct,
-                    onImageDoubleTap = { url -> fullscreenImageUrl = url },
-                )
-            }
-
-            item { Spacer(Modifier.height(4.dp)) }
         }
     }
 
