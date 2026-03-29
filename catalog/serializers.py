@@ -13,14 +13,18 @@ def _public_url(key):
 
 class CategorySerializer(serializers.ModelSerializer):
     cover_url = serializers.SerializerMethodField()
+    cover_url_600 = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'cover_url', 'product_count']
+        fields = ['id', 'name', 'cover_url', 'cover_url_600', 'product_count']
 
     def get_cover_url(self, obj):
         return _public_url(obj.cover_key)
+
+    def get_cover_url_600(self, obj):
+        return _public_url(thumbnail_key(obj.cover_key, 600)) if obj.cover_key else None
 
     def get_product_count(self, obj):
         return obj.products.filter(is_hidden=False).count()

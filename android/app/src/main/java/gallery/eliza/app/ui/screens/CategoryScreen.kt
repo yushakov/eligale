@@ -245,7 +245,7 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
             ) {
                 if (category.cover_url != null) {
                     AsyncImage(
-                        model = category.cover_url,
+                        model = category.cover_url_600 ?: category.cover_url,
                         contentDescription = category.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

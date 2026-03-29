@@ -4,6 +4,7 @@ data class Category(
     val id: Int,
     val name: String,
     val cover_url: String?,
+    val cover_url_600: String? = null,
     val product_count: Int = 0
 )
 

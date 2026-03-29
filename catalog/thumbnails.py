@@ -6,11 +6,13 @@ Naming convention:
     100px thumb:   catalog/abc123_100.jpg
     200px thumb:   catalog/abc123_200.jpg
     300px thumb:   catalog/abc123_300.jpg
+    600px thumb:   catalog/abc123_600.jpg
 
 Generated sizes cover all Android use cases:
     100 — ProductListScreen (4-column grid)
-    200 — ProductGallery (3-column grid)
-    300 — Category covers
+    200 — ProductGallery (3-column grid, kept for potential future use)
+    300 — ProductGallery (3-column grid, current)
+    600 — Category covers (circle, ~168dp × up to 4× density)
 """
 
 import io
@@ -25,7 +27,7 @@ from PIL import Image
 
 logger = logging.getLogger(__name__)
 
-THUMBNAIL_SIZES = [100, 200, 300]
+THUMBNAIL_SIZES = [100, 200, 300, 600]
 
 
 def _s3():
