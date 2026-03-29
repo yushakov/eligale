@@ -5,9 +5,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -516,11 +517,6 @@ fun FullscreenImageViewer(
         offset = Offset.Zero
     }
 
-    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 8f)
-        offset = if (scale > 1f) offset + panChange else Offset.Zero
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -553,7 +549,24 @@ fun FullscreenImageViewer(
                             translationX = offset.x,
                             translationY = offset.y,
                         )
-                        .transformable(state = transformState),
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                // awaitEachGesture already starts after a down event
+                                do {
+                                    val event = awaitPointerEvent()
+                                    val fingerCount = event.changes.count { it.pressed }
+                                    // Consume only on two-finger zoom OR single-finger pan while zoomed.
+                                    // Single finger at scale==1 is left unconsumed so the pager swipe works.
+                                    if (fingerCount >= 2 || (fingerCount == 1 && scale > 1f)) {
+                                        val zoom = event.calculateZoom()
+                                        val pan = event.calculatePan()
+                                        scale = (scale * zoom).coerceIn(1f, 8f)
+                                        offset = if (scale > 1f) offset + pan else Offset.Zero
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                } while (event.changes.any { it.pressed })
+                            }
+                        },
                 )
             }
         }
