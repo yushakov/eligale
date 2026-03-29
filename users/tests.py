@@ -282,3 +282,56 @@ class DeleteAccountTest(TestCase):
         r = self._delete(token=self.token.key)
         self.assertEqual(r.status_code, 403)
         self.assertTrue(User.objects.filter(email='user@example.com').exists())
+
+
+class LogoutTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='user@example.com')
+        self.token = Token.objects.create(user=self.user)
+
+    def _post(self, token=None):
+        headers = {}
+        if token:
+            headers['HTTP_AUTHORIZATION'] = f'Token {token}'
+        return self.client.post('/api/auth/logout/', **headers)
+
+    def test_requires_auth(self):
+        r = self._post()
+        self.assertEqual(r.status_code, 401)
+
+    def test_returns_ok(self):
+        r = self._post(token=self.token.key)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()['ok'])
+
+    def test_deletes_token_from_db(self):
+        key = self.token.key
+        self._post(token=key)
+        self.assertFalse(Token.objects.filter(key=key).exists())
+
+    def test_subsequent_request_returns_401(self):
+        key = self.token.key
+        self._post(token=key)
+        r = self.client.get('/api/auth/profile/', HTTP_AUTHORIZATION=f'Token {key}')
+        self.assertEqual(r.status_code, 401)
+
+
+class ProfileIsStaffTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='user@example.com')
+        self.token = Token.objects.create(user=self.user)
+
+    def _get(self):
+        return self.client.get('/api/auth/profile/', HTTP_AUTHORIZATION=f'Token {self.token.key}')
+
+    def test_is_staff_false_for_regular_user(self):
+        r = self._get()
+        self.assertFalse(r.json()['is_staff'])
+
+    def test_is_staff_true_for_staff_user(self):
+        self.user.is_staff = True
+        self.user.save()
+        r = self._get()
+        self.assertTrue(r.json()['is_staff'])

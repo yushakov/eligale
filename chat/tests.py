@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
@@ -339,3 +341,55 @@ class StaffUnreadTest(ChatTestBase):
         self.make_message(chat, self.staff)
         r = self.client.get('/api/chats/unread/', **self.staff_auth())
         self.assertEqual(r.json()['unread'], 0)
+
+
+# ── chat_media_presign ────────────────────────────────────────────────────────
+
+def _make_mock_s3():
+    mock_client = MagicMock()
+    mock_client.generate_presigned_url.return_value = 'https://storage.yandexcloud.net/presigned'
+    mock_session = MagicMock()
+    mock_session.client.return_value = mock_client
+    return mock_session, mock_client
+
+
+class ChatMediaPresignTest(ChatTestBase):
+    def _post(self, filename='photo.jpg', token=None):
+        headers = self.auth(token) if token else {}
+        return self.client.post(
+            '/api/chat/media/presign/',
+            {'filename': filename},
+            content_type='application/json',
+            **headers,
+        )
+
+    def test_requires_auth(self):
+        r = self._post()
+        self.assertEqual(r.status_code, 401)
+
+    @patch('chat.views.boto3.session.Session')
+    def test_returns_upload_and_public_url(self, mock_session_cls):
+        mock_session_cls.return_value = _make_mock_s3()[0]
+        r = self._post(token=self.user_token)
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn('upload_url', data)
+        self.assertIn('public_url', data)
+
+    @patch('chat.views.boto3.session.Session')
+    def test_key_in_chat_folder(self, mock_session_cls):
+        mock_session_cls.return_value = _make_mock_s3()[0]
+        r = self._post(token=self.user_token)
+        self.assertIn('/chat/', r.json()['public_url'])
+
+    @patch('chat.views.boto3.session.Session')
+    def test_accessible_by_regular_user(self, mock_session_cls):
+        mock_session_cls.return_value = _make_mock_s3()[0]
+        r = self._post(token=self.user_token)
+        self.assertEqual(r.status_code, 200)
+
+    @patch('chat.views.boto3.session.Session')
+    def test_accessible_by_staff(self, mock_session_cls):
+        mock_session_cls.return_value = _make_mock_s3()[0]
+        r = self._post(token=self.staff_token)
+        self.assertEqual(r.status_code, 200)

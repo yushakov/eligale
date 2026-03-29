@@ -191,6 +191,12 @@ class CommentListAPITest(TestCase):
         )
         self.assertEqual(r.status_code, 404)
 
+    def test_comment_has_user_id_and_email(self):
+        r = self.client.get(f'/api/products/{self.product.pk}/comments/')
+        c = r.json()[0]
+        self.assertEqual(c['user_id'], self.user.id)
+        self.assertEqual(c['user_email'], 'test@example.com')
+
 
 class Mobile2CategoryDetailTest(TestCase):
     """Тест страницы категории в mobile2 — плиточный вид."""
@@ -649,3 +655,141 @@ class StaffCommentDeleteTest(StaffCommentTestBase):
     def test_404_for_missing_comment(self):
         r = self.client.delete('/api/staff/comments/99999/delete/', **self.staff_auth())
         self.assertEqual(r.status_code, 404)
+
+
+# ── My Comments endpoint ──────────────────────────────────────────────────────
+
+class MyCommentsTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='user@example.com')
+        self.other = User.objects.create_user(email='other@example.com')
+        self.token = Token.objects.create(user=self.user)
+        self.product = Product.objects.create(name='Кольцо')
+        self.comment = Comment.objects.create(product=self.product, user=self.user, text='Мой комментарий')
+        Comment.objects.create(product=self.product, user=self.other, text='Чужой комментарий')
+
+    def _auth(self):
+        return {'HTTP_AUTHORIZATION': f'Token {self.token.key}'}
+
+    def test_requires_auth(self):
+        r = self.client.get('/api/comments/my/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_returns_own_comments_only(self):
+        r = self.client.get('/api/comments/my/', **self._auth())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.json()), 1)
+        self.assertEqual(r.json()[0]['text'], 'Мой комментарий')
+
+    def test_excludes_other_users_comments(self):
+        r = self.client.get('/api/comments/my/', **self._auth())
+        texts = [c['text'] for c in r.json()]
+        self.assertNotIn('Чужой комментарий', texts)
+
+    def test_has_expected_fields(self):
+        r = self.client.get('/api/comments/my/', **self._auth())
+        c = r.json()[0]
+        for field in ['id', 'product_id', 'product_name', 'text', 'created_at']:
+            self.assertIn(field, c)
+
+    def test_product_id_and_name_correct(self):
+        r = self.client.get('/api/comments/my/', **self._auth())
+        c = r.json()[0]
+        self.assertEqual(c['product_id'], self.product.id)
+        self.assertEqual(c['product_name'], 'Кольцо')
+
+    def test_sorted_newest_first(self):
+        comment2 = Comment.objects.create(product=self.product, user=self.user, text='Второй')
+        r = self.client.get('/api/comments/my/', **self._auth())
+        ids = [c['id'] for c in r.json()]
+        self.assertEqual(ids[0], comment2.id)
+
+    def test_returns_empty_when_no_comments(self):
+        Comment.objects.filter(user=self.user).delete()
+        r = self.client.get('/api/comments/my/', **self._auth())
+        self.assertEqual(r.json(), [])
+
+
+# ── Search endpoint ───────────────────────────────────────────────────────────
+
+class SearchTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='user@example.com')
+        self.other = User.objects.create_user(email='other@example.com')
+        self.staff = User.objects.create_superuser(email='staff@example.com', password='pass')
+        self.user_token = Token.objects.create(user=self.user)
+        self.other_token = Token.objects.create(user=self.other)
+        self.staff_token = Token.objects.create(user=self.staff)
+        self.product = Product.objects.create(name='Серьги')
+        self.comment = Comment.objects.create(
+            product=self.product, user=self.user, text='золотые серьги очень красивые'
+        )
+        from chat.models import Chat, ChatMessage
+        self.user_chat = Chat.objects.create(user=self.user)
+        self.user_msg = ChatMessage.objects.create(
+            chat=self.user_chat, sender=self.user, text='Интересует кольцо'
+        )
+        self.other_chat = Chat.objects.create(user=self.other)
+        self.other_msg = ChatMessage.objects.create(
+            chat=self.other_chat, sender=self.other, text='Тоже интересует кольцо'
+        )
+
+    def _auth(self, token):
+        return {'HTTP_AUTHORIZATION': f'Token {token.key}'}
+
+    def test_requires_auth(self):
+        r = self.client.get('/api/search/?q=тест')
+        self.assertEqual(r.status_code, 401)
+
+    def test_empty_query_returns_empty_list(self):
+        r = self.client.get('/api/search/', **self._auth(self.user_token))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), [])
+
+    def test_finds_comment_by_text(self):
+        r = self.client.get('/api/search/?q=золотые', **self._auth(self.user_token))
+        types = [item['type'] for item in r.json()]
+        self.assertIn('comment', types)
+
+    def test_comment_result_has_expected_fields(self):
+        r = self.client.get('/api/search/?q=золотые', **self._auth(self.user_token))
+        comment_results = [item for item in r.json() if item['type'] == 'comment']
+        self.assertTrue(len(comment_results) > 0)
+        c = comment_results[0]
+        for field in ['type', 'id', 'snippet', 'created_at', 'product_id', 'product_name', 'author']:
+            self.assertIn(field, c)
+
+    def test_snippet_contains_query(self):
+        r = self.client.get('/api/search/?q=золотые', **self._auth(self.user_token))
+        comment_results = [item for item in r.json() if item['type'] == 'comment']
+        self.assertIn('золотые', comment_results[0]['snippet'].lower())
+
+    def test_user_finds_own_chat_messages(self):
+        r = self.client.get('/api/search/?q=кольцо', **self._auth(self.user_token))
+        msg_ids = [item['id'] for item in r.json() if item['type'] == 'message']
+        self.assertIn(self.user_msg.id, msg_ids)
+
+    def test_user_cannot_see_other_users_messages(self):
+        r = self.client.get('/api/search/?q=кольцо', **self._auth(self.user_token))
+        msg_ids = [item['id'] for item in r.json() if item['type'] == 'message']
+        self.assertNotIn(self.other_msg.id, msg_ids)
+
+    def test_staff_sees_all_users_messages(self):
+        r = self.client.get('/api/search/?q=кольцо', **self._auth(self.staff_token))
+        msg_ids = [item['id'] for item in r.json() if item['type'] == 'message']
+        self.assertIn(self.user_msg.id, msg_ids)
+        self.assertIn(self.other_msg.id, msg_ids)
+
+    def test_message_result_has_expected_fields(self):
+        r = self.client.get('/api/search/?q=кольцо', **self._auth(self.user_token))
+        msg_results = [item for item in r.json() if item['type'] == 'message']
+        self.assertTrue(len(msg_results) > 0)
+        m = msg_results[0]
+        for field in ['type', 'id', 'snippet', 'created_at', 'chat_user_id', 'user_email']:
+            self.assertIn(field, m)
+
+    def test_no_results_for_unknown_query(self):
+        r = self.client.get('/api/search/?q=xyzнесуществующее123', **self._auth(self.user_token))
+        self.assertEqual(r.json(), [])
