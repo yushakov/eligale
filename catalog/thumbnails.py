@@ -108,13 +108,20 @@ def generate_thumbnails_async(key: str) -> None:
 
 
 def thumbnails_exist(key: str) -> bool:
-    """Check whether thumbnails already exist for this key (uses 100px as indicator)."""
+    """Check whether thumbnails already exist for this key.
+
+    Uses the largest size in THUMBNAIL_SIZES as indicator — if it's present,
+    all smaller sizes were generated in the same run. This means adding a new
+    larger size to THUMBNAIL_SIZES will automatically trigger regeneration on
+    the next manage.py generate_missing_thumbnails run.
+    """
     if not key:
         return True
     bucket = settings.YA_PUBLIC_UPLOADER_BUCKET_NAME
     s3 = _s3()
+    largest = max(THUMBNAIL_SIZES)
     try:
-        s3.head_object(Bucket=bucket, Key=thumbnail_key(key, 100))
+        s3.head_object(Bucket=bucket, Key=thumbnail_key(key, largest))
         return True
     except ClientError as e:
         if e.response['Error']['Code'] in ('404', 'NoSuchKey'):
