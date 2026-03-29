@@ -19,8 +19,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import android.app.DownloadManager
@@ -70,6 +68,10 @@ fun ProductDetailScreen(
     var commentText by remember { mutableStateOf("") }
     var sendingComment by remember { mutableStateOf(false) }
     var fullscreenState by remember { mutableStateOf<Pair<List<gallery.eliza.app.data.ProductImage>, Int>?>(null) }
+    var initialFullscreenOpened by remember { mutableStateOf(false) }
+    // Диалоги "В чат" — подняты на верхний уровень, чтобы быть доступными из FullscreenImageViewer
+    var chatDialogPage by remember { mutableStateOf<Int?>(null) }
+    var staffChatDialogPage by remember { mutableStateOf<Int?>(null) }
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -85,6 +87,21 @@ fun ProductDetailScreen(
             error = e.message
         } finally {
             loading = false
+        }
+    }
+
+    // Автооткрытие fullscreen при переходе из чата по [product:id:page]
+    LaunchedEffect(product) {
+        if (!initialFullscreenOpened && initialImagePage > 0 && product != null) {
+            val imgs = product!!.images.ifEmpty {
+                product!!.cover_url?.let {
+                    listOf(gallery.eliza.app.data.ProductImage(0, it, 0))
+                } ?: emptyList()
+            }
+            if (imgs.isNotEmpty()) {
+                fullscreenState = imgs to initialImagePage.coerceIn(0, imgs.size - 1)
+                initialFullscreenOpened = true
+            }
         }
     }
 
@@ -147,10 +164,6 @@ fun ProductDetailScreen(
                                 listOf(gallery.eliza.app.data.ProductImage(0, it, 0))
                             } ?: emptyList()
                         }
-
-                        // Страница из диалога: null = диалог закрыт
-                        var chatDialogPage by remember { mutableStateOf<Int?>(null) }
-                        var staffChatDialogPage by remember { mutableStateOf<Int?>(null) }
 
                         // Диалог для обычного пользователя
                         chatDialogPage?.let { page ->
@@ -233,13 +246,7 @@ fun ProductDetailScreen(
                                 if (images.isNotEmpty()) {
                                     ProductGallery(
                                         images = images,
-                                        initialPage = initialImagePage,
-                                        onFullscreen = { page -> fullscreenState = images to page },
-                                        onChatButtonClick = when {
-                                            onGoToChat != null && !isStaff -> { page -> chatDialogPage = page }
-                                            onGoToChats != null && isStaff -> { page -> staffChatDialogPage = page }
-                                            else -> null
-                                        },
+                                        onPhotoTap = { page -> fullscreenState = images to page },
                                     )
                                 }
                             }
@@ -392,102 +399,57 @@ fun ProductDetailScreen(
             exit = fadeOut()
         ) {
             fullscreenState?.let { (imgs, page) ->
-                FullscreenImageViewer(images = imgs, initialPage = page, onDismiss = { fullscreenState = null })
+                FullscreenImageViewer(
+                    images = imgs,
+                    initialPage = page,
+                    onDismiss = { fullscreenState = null },
+                    onChatButtonClick = when {
+                        onGoToChat != null && !isStaff -> { p -> chatDialogPage = p }
+                        onGoToChats != null && isStaff -> { p -> staffChatDialogPage = p }
+                        else -> null
+                    },
+                )
             }
         }
     }
 }
 
 /**
- * Галерея изображений товара. Отдельный composable, чтобы pagerState жил на правильном уровне
- * и его можно было тестировать в изоляции.
- *
- * @param images список фотографий
- * @param initialPage начальная страница (например, когда открываем конкретное фото из чата)
- * @param onFullscreen двойной тап → полноэкранный просмотр; вызывается с индексом страницы
- * @param onChatButtonClick если передан — показывает кнопку "В чат"; вызывается с текущей страницей
+ * Галерея изображений товара в виде сетки 3×N.
+ * Тап по фотографии открывает полноэкранный просмотр.
  */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ProductGallery(
     images: List<gallery.eliza.app.data.ProductImage>,
-    initialPage: Int = 0,
-    onFullscreen: (page: Int) -> Unit,
-    onChatButtonClick: ((page: Int) -> Unit)? = null,
+    onPhotoTap: (index: Int) -> Unit,
 ) {
-    val safeInitialPage = initialPage.coerceIn(0, (images.size - 1).coerceAtLeast(0))
-    val pagerState = rememberPagerState(
-        initialPage = safeInitialPage,
-        pageCount = { images.size },
-    )
-    val scope = rememberCoroutineScope()
-
-    Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            AsyncImage(
-                model = images[page].image_url,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onDoubleTap = { onFullscreen(page) }
+    val columns = 3
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        val rows = (images.size + columns - 1) / columns
+        for (row in 0 until rows) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                for (col in 0 until columns) {
+                    val index = row * columns + col
+                    if (index < images.size) {
+                        AsyncImage(
+                            model = images[index].image_url,
+                            contentDescription = "Фото ${index + 1}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clickable { onPhotoTap(index) },
                         )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
                     }
-            )
-        }
-
-        // Стрелка «назад»
-        if (pagerState.currentPage > 0) {
-            IconButton(
-                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 4.dp)
-                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
-                    .size(36.dp),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Предыдущее фото", tint = Color.White)
-            }
-        }
-
-        // Стрелка «вперёд»
-        if (pagerState.currentPage < images.size - 1) {
-            IconButton(
-                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 4.dp)
-                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
-                    .size(36.dp),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Следующее фото", tint = Color.White)
-            }
-        }
-
-        if (images.size > 1) {
-            Text(
-                text = "${pagerState.currentPage + 1} / ${images.size}",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(8.dp)
-            )
-        }
-
-        if (onChatButtonClick != null) {
-            val currentPage = pagerState.currentPage
-            Button(
-                onClick = { onChatButtonClick(currentPage) },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BrownDark),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            ) {
-                Text("В чат", color = Color.White, fontSize = 13.sp)
+                }
             }
         }
     }
@@ -499,6 +461,7 @@ fun FullscreenImageViewer(
     images: List<gallery.eliza.app.data.ProductImage>,
     initialPage: Int = 0,
     onDismiss: () -> Unit,
+    onChatButtonClick: ((page: Int) -> Unit)? = null,
 ) {
     // Cyclic pager: virtual page count is huge, real index = virtualPage % images.size.
     // Start offset keeps the user near the center so they can swipe both ways indefinitely.
@@ -574,8 +537,25 @@ fun FullscreenImageViewer(
             }
         }
 
-        // Кнопки скачать / скопировать — берут URL текущей страницы
-        val currentUrl = images[pagerState.currentPage % images.size].image_url
+        val currentRealPage = pagerState.currentPage % images.size
+        val currentUrl = images[currentRealPage].image_url
+
+        // Кнопка "В чат" — привязана к текущей фотографии
+        if (onChatButtonClick != null) {
+            Button(
+                onClick = { onChatButtonClick(currentRealPage) },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(end = 12.dp, top = 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.85f)),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                Text("В чат", color = Color.White, fontSize = 13.sp)
+            }
+        }
+
+        // Кнопки скачать / скопировать
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

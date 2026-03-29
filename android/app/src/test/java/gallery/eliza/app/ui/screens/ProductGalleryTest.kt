@@ -12,11 +12,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Тесты для ProductGallery — проверяют, что pagerState корректно отражает initialPage
- * и передаёт текущую страницу в колбэки. Это гарантирует, что кнопка "В чат"
- * всегда отправляет правильный индекс фото.
- *
- * Используем Robolectric (JVM), чтобы не зависеть от версии Android на устройстве.
+ * Тесты для ProductGallery — сетка 3×N.
+ * Проверяют, что все фотографии присутствуют в дереве семантики
+ * и что тап на ячейку передаёт правильный индекс в колбэк.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -30,157 +28,78 @@ class ProductGalleryTest {
         List(count) { i -> ProductImage(id = i, image_url = null, order = i) }
 
     // ──────────────────────────────────────────────────────────────────
-    // Счётчик страниц
+    // Наличие элементов в сетке
     // ──────────────────────────────────────────────────────────────────
 
     @Test
-    fun gallery_showsCorrectInitialPageCounter() {
+    fun gallery_allPhotosPresent_byContentDescription() {
         composeTestRule.setContent {
             ElizaGalleryTheme {
-                ProductGallery(
-                    images = fakeImages(5),
-                    initialPage = 2,
-                    onFullscreen = {},
-                    onChatButtonClick = null,
-                )
+                ProductGallery(images = fakeImages(5), onPhotoTap = {})
             }
         }
-        // Должно показывать "3 / 5" (страницы с 1, не с 0)
-        composeTestRule.onNodeWithText("3 / 5").assertIsDisplayed()
+        for (i in 1..5) {
+            composeTestRule.onNodeWithContentDescription("Фото $i").assertExists()
+        }
     }
 
     @Test
-    fun gallery_noCounter_onSingleImage() {
+    fun gallery_singleImage_rendersWithoutCrash() {
         composeTestRule.setContent {
             ElizaGalleryTheme {
-                ProductGallery(
-                    images = fakeImages(1),
-                    initialPage = 0,
-                    onFullscreen = {},
-                    onChatButtonClick = null,
-                )
+                ProductGallery(images = fakeImages(1), onPhotoTap = {})
             }
         }
-        // На одной картинке счётчик не нужен
-        composeTestRule.onNodeWithText("1 / 1").assertDoesNotExist()
-    }
-
-    // ──────────────────────────────────────────────────────────────────
-    // Кнопка "В чат"
-    // ──────────────────────────────────────────────────────────────────
-
-    @Test
-    fun gallery_chatButtonVisible_whenCallbackProvided() {
-        composeTestRule.setContent {
-            ElizaGalleryTheme {
-                ProductGallery(
-                    images = fakeImages(3),
-                    initialPage = 0,
-                    onFullscreen = {},
-                    onChatButtonClick = {},
-                )
-            }
-        }
-        composeTestRule.onNodeWithText("В чат").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Фото 1").assertExists()
     }
 
     @Test
-    fun gallery_chatButtonAbsent_whenNoCallback() {
+    fun gallery_emptyImages_rendersWithoutCrash() {
         composeTestRule.setContent {
             ElizaGalleryTheme {
-                ProductGallery(
-                    images = fakeImages(3),
-                    initialPage = 0,
-                    onFullscreen = {},
-                    onChatButtonClick = null,
-                )
+                ProductGallery(images = emptyList(), onPhotoTap = {})
             }
         }
-        composeTestRule.onNodeWithText("В чат").assertDoesNotExist()
+        // Просто проверяем отсутствие краша
     }
 
     // ──────────────────────────────────────────────────────────────────
-    // Ключевой тест: колбэк передаёт ТЕКУЩУЮ страницу
-    // ──────────────────────────────────────────────────────────────────
-
-    // ──────────────────────────────────────────────────────────────────
-    // Стрелки листания
+    // Тап передаёт правильный индекс
     // ──────────────────────────────────────────────────────────────────
 
     @Test
-    fun gallery_noArrows_onSingleImage() {
+    fun gallery_tapFirstPhoto_reportsIndex0() {
+        var capturedIndex: Int? = null
         composeTestRule.setContent {
             ElizaGalleryTheme {
-                ProductGallery(images = fakeImages(1), initialPage = 0, onFullscreen = {}, onChatButtonClick = null)
+                ProductGallery(images = fakeImages(5), onPhotoTap = { capturedIndex = it })
             }
         }
-        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription("Следующее фото").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Фото 1").performClick()
+        assertEquals(0, capturedIndex)
     }
 
     @Test
-    fun gallery_onFirstPage_noBackArrow_hasForwardArrow() {
+    fun gallery_tapThirdPhoto_reportsIndex2() {
+        var capturedIndex: Int? = null
         composeTestRule.setContent {
             ElizaGalleryTheme {
-                ProductGallery(images = fakeImages(3), initialPage = 0, onFullscreen = {}, onChatButtonClick = null)
+                ProductGallery(images = fakeImages(5), onPhotoTap = { capturedIndex = it })
             }
         }
-        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription("Следующее фото").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Фото 3").performClick()
+        assertEquals(2, capturedIndex)
     }
 
     @Test
-    fun gallery_onLastPage_hasBackArrow_noForwardArrow() {
+    fun gallery_tapLastPhoto_reportsCorrectIndex() {
+        var capturedIndex: Int? = null
         composeTestRule.setContent {
             ElizaGalleryTheme {
-                ProductGallery(images = fakeImages(3), initialPage = 2, onFullscreen = {}, onChatButtonClick = null)
+                ProductGallery(images = fakeImages(4), onPhotoTap = { capturedIndex = it })
             }
         }
-        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Следующее фото").assertDoesNotExist()
-    }
-
-    @Test
-    fun gallery_onMiddlePage_bothArrowsVisible() {
-        composeTestRule.setContent {
-            ElizaGalleryTheme {
-                ProductGallery(images = fakeImages(5), initialPage = 2, onFullscreen = {}, onChatButtonClick = null)
-            }
-        }
-        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Следующее фото").assertIsDisplayed()
-    }
-
-    @Test
-    fun gallery_forwardArrowClick_advancesPage() {
-        composeTestRule.setContent {
-            ElizaGalleryTheme {
-                ProductGallery(images = fakeImages(3), initialPage = 0, onFullscreen = {}, onChatButtonClick = null)
-            }
-        }
-        composeTestRule.onNodeWithContentDescription("Следующее фото").performClick()
-        composeTestRule.waitUntil(2_000) {
-            composeTestRule.onAllNodesWithText("2 / 3").fetchSemanticsNodes().isNotEmpty()
-        }
-        composeTestRule.onNodeWithText("2 / 3").assertIsDisplayed()
-    }
-
-    @Test
-    fun gallery_chatButtonClick_reportsInitialPageAsCurrentPage() {
-        // Этот тест защищает от регрессии: если pagerState создаётся не там где надо,
-        // он может игнорировать initialPage и всегда возвращать 0.
-        var capturedPage: Int? = null
-        composeTestRule.setContent {
-            ElizaGalleryTheme {
-                ProductGallery(
-                    images = fakeImages(5),
-                    initialPage = 3,
-                    onFullscreen = {},
-                    onChatButtonClick = { page -> capturedPage = page },
-                )
-            }
-        }
-        composeTestRule.onNodeWithText("В чат").performClick()
-        assertEquals("Кнопка должна передать текущую страницу (3), а не 0", 3, capturedPage)
+        composeTestRule.onNodeWithContentDescription("Фото 4").performClick()
+        assertEquals(3, capturedIndex)
     }
 }
