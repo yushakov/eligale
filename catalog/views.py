@@ -43,6 +43,29 @@ def _make_snippet(text: str, query: str, context: int = 80) -> str:
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
+def my_comments(request):
+    comments = (
+        Comment.objects
+        .filter(user=request.user)
+        .select_related('product')
+        .order_by('-created_at')
+    )
+    data = [
+        {
+            'id': c.id,
+            'product_id': c.product_id,
+            'product_name': c.product.name,
+            'text': c.text,
+            'created_at': c.created_at.isoformat(),
+        }
+        for c in comments
+    ]
+    return Response(data)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def search(request):
     q = request.GET.get('q', '').strip()
     if not q:
