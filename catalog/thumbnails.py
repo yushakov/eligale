@@ -23,7 +23,7 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from django.conf import settings
-from PIL import Image
+from PIL import Image, ImageOps
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,7 @@ def generate_thumbnails(key: str) -> None:
 
     try:
         img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img)  # apply EXIF rotation before resizing
         img = img.convert('RGB')  # flatten alpha channel (PNG → JPEG)
     except Exception:
         logger.exception('Could not open image %s', key)
