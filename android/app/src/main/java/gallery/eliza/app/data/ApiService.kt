@@ -7,6 +7,9 @@ import retrofit2.http.*
 import java.util.concurrent.TimeUnit
 
 interface ApiService {
+    @GET("api/comments/my/")
+    suspend fun getMyComments(@Header("Authorization") token: String): List<MyComment>
+
     @GET("api/search/")
     suspend fun search(
         @Header("Authorization") token: String,

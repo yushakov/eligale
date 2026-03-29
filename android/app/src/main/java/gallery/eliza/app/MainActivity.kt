@@ -25,6 +25,7 @@ import gallery.eliza.app.ui.screens.ChatScreen
 import gallery.eliza.app.ui.screens.CommentListScreen
 import gallery.eliza.app.ui.screens.ProductDetailScreen
 import gallery.eliza.app.ui.screens.ProductListScreen
+import gallery.eliza.app.ui.screens.MyCommentsScreen
 import gallery.eliza.app.ui.screens.SearchScreen
 import gallery.eliza.app.ui.theme.ElizaGalleryTheme
 import kotlinx.coroutines.launch
@@ -85,6 +86,7 @@ class MainActivity : ComponentActivity() {
                             onChatClick = { navController.navigate("chat") },
                             onChatsClick = { navController.navigate("chats") },
                             onCommentsClick = { navController.navigate("comments") },
+                            onMyCommentsClick = { navController.navigate("my_comments") },
                             onSearchClick = { navController.navigate("search") },
                             isStaff = isStaff,
                         )
@@ -149,6 +151,18 @@ class MainActivity : ComponentActivity() {
                                 }
                             } else null,
                             onHome = { navController.popBackStack("categories", false) },
+                        )
+                    }
+                    // Мои комментарии (пользователь)
+                    composable("my_comments") {
+                        val t = token ?: return@composable
+                        MyCommentsScreen(
+                            token = t,
+                            onBack = { navController.popBackStack() },
+                            onHome = { navController.popBackStack("categories", false) },
+                            onOpenProduct = { productId, commentId ->
+                                navController.navigate("product/$productId?commentId=$commentId")
+                            },
                         )
                     }
                     // Поиск

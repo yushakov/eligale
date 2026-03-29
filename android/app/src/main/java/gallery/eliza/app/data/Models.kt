@@ -78,6 +78,14 @@ data class StaffComment(
     val created_at: String,
 )
 
+data class MyComment(
+    val id: Int,
+    val product_id: Int,
+    val product_name: String,
+    val text: String,
+    val created_at: String,
+)
+
 data class SearchResult(
     val type: String,           // "comment" or "message"
     val id: Int,

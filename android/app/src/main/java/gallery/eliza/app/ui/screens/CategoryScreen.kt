@@ -37,6 +37,7 @@ fun CategoryScreen(
     onChatClick: () -> Unit,
     onChatsClick: () -> Unit,
     onCommentsClick: () -> Unit,
+    onMyCommentsClick: () -> Unit,
     onSearchClick: () -> Unit,
     isStaff: Boolean,
 ) {
@@ -156,6 +157,10 @@ fun CategoryScreen(
                                         text = { Text("Чат") },
                                         onClick = { showMenu = false; onChatClick() },
                                         trailingIcon = if (unreadCount > 0) {{ RedDot() }} else null,
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Комменты") },
+                                        onClick = { showMenu = false; onMyCommentsClick() },
                                     )
                                 }
                                 DropdownMenuItem(
