@@ -438,7 +438,7 @@ fun ProductGallery(
                     val index = row * columns + col
                     if (index < images.size) {
                         AsyncImage(
-                            model = images[index].image_url_200 ?: images[index].image_url,
+                            model = images[index].image_url_300 ?: images[index].image_url,
                             contentDescription = "Фото ${index + 1}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
