@@ -195,6 +195,32 @@ python manage.py runserver 0.0.0.0:8000
 - venv называется `.venv` (не `venv`); всегда активировать: `source .venv/bin/activate`
 - Chat URLs используют `user_id` (не `chat_id`) — важно при отладке
 
+## Тесты
+
+### Backend (Django)
+Запуск: `source .venv/bin/activate && python manage.py test catalog users chat`
+
+| Файл | Классы | Что покрыто |
+|---|---|---|
+| `catalog/tests.py` | 15 классов | CategoryList, ProductList, ProductDetail, CommentList (включая `user_id`/`user_email`), MyComments, Search (изоляция user/staff), StaffComments CRUD, Mobile2 views, Presign |
+| `users/tests.py` | 10 классов | RequestCode, VerifyCode, SetName, UniqueDisplayName, Profile (включая `is_staff`), Logout (удаление токена, последующий 401), DeleteAccount |
+| `chat/tests.py` | 13 классов | ChatInfo, Messages (пагинация after/before), Send, MarkRead, Unread, StaffChatList/Messages/Send/MarkRead, StaffUnread, ChatMediaPresign |
+
+### Android (Kotlin + Robolectric)
+Запуск: `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" && ./gradlew :app:testDebugUnitTest`
+
+| Файл | Что покрыто |
+|---|---|
+| `ui/screens/ProductGalleryTest.kt` | Счётчик страниц, кнопка "В чат", колбэк передаёт текущую страницу |
+| `ui/screens/MessageBubbleTest.kt` | Обычный текст; `[product:id:page]` → кнопка + правильные id/page в колбэке; без колбэка кнопки нет; сырые теги не просачиваются в UI; текст рядом с тегом отображается |
+| `data/ChatMessageEntityTest.kt` | `toModel()` / `toEntity()` маппинг всех полей, `chat_user_id`, round-trip |
+| `data/TokenStorageTest.kt` | save/get/clear/overwrite |
+| `data/ChatDaoTest.kt` | CRUD, изоляция по `chat_user_id`, порядок ASC, `minId`/`maxId`, `markReadUpTo` (только staff, только до upToId, без cross-chat эффектов), OnConflict.REPLACE |
+
+**Нюанс Robolectric:** `DropdownMenu` рендерится в `Popup` — `assertIsDisplayed()` не работает (нода есть, но не "displayed"). Меню "Скопировать" не тестируется через Robolectric.
+
+**Нюанс Search (SQLite + кириллица):** `icontains` в SQLite не чувствителен к регистру только для ASCII. Тестовые данные должны быть в том же регистре, что и поисковый запрос.
+
 ## Роадмап
 - **V1** ✅: каталог с изображениями, мобильный интерфейс управления
 - **V2** ✅: комментарии, регистрация через email, display_name, текстовый чат
