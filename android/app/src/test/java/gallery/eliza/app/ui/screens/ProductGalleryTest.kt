@@ -103,6 +103,68 @@ class ProductGalleryTest {
     // Ключевой тест: колбэк передаёт ТЕКУЩУЮ страницу
     // ──────────────────────────────────────────────────────────────────
 
+    // ──────────────────────────────────────────────────────────────────
+    // Стрелки листания
+    // ──────────────────────────────────────────────────────────────────
+
+    @Test
+    fun gallery_noArrows_onSingleImage() {
+        composeTestRule.setContent {
+            ElizaGalleryTheme {
+                ProductGallery(images = fakeImages(1), initialPage = 0, onFullscreen = {}, onChatButtonClick = null)
+            }
+        }
+        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Следующее фото").assertDoesNotExist()
+    }
+
+    @Test
+    fun gallery_onFirstPage_noBackArrow_hasForwardArrow() {
+        composeTestRule.setContent {
+            ElizaGalleryTheme {
+                ProductGallery(images = fakeImages(3), initialPage = 0, onFullscreen = {}, onChatButtonClick = null)
+            }
+        }
+        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Следующее фото").assertIsDisplayed()
+    }
+
+    @Test
+    fun gallery_onLastPage_hasBackArrow_noForwardArrow() {
+        composeTestRule.setContent {
+            ElizaGalleryTheme {
+                ProductGallery(images = fakeImages(3), initialPage = 2, onFullscreen = {}, onChatButtonClick = null)
+            }
+        }
+        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Следующее фото").assertDoesNotExist()
+    }
+
+    @Test
+    fun gallery_onMiddlePage_bothArrowsVisible() {
+        composeTestRule.setContent {
+            ElizaGalleryTheme {
+                ProductGallery(images = fakeImages(5), initialPage = 2, onFullscreen = {}, onChatButtonClick = null)
+            }
+        }
+        composeTestRule.onNodeWithContentDescription("Предыдущее фото").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Следующее фото").assertIsDisplayed()
+    }
+
+    @Test
+    fun gallery_forwardArrowClick_advancesPage() {
+        composeTestRule.setContent {
+            ElizaGalleryTheme {
+                ProductGallery(images = fakeImages(3), initialPage = 0, onFullscreen = {}, onChatButtonClick = null)
+            }
+        }
+        composeTestRule.onNodeWithContentDescription("Следующее фото").performClick()
+        composeTestRule.waitUntil(2_000) {
+            composeTestRule.onAllNodesWithText("2 / 3").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("2 / 3").assertIsDisplayed()
+    }
+
     @Test
     fun gallery_chatButtonClick_reportsInitialPageAsCurrentPage() {
         // Этот тест защищает от регрессии: если pagerState создаётся не там где надо,

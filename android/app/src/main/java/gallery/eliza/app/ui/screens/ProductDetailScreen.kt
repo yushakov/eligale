@@ -18,6 +18,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import android.app.DownloadManager
@@ -417,6 +419,7 @@ fun ProductGallery(
         initialPage = safeInitialPage,
         pageCount = { images.size },
     )
+    val scope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
         HorizontalPager(
@@ -437,6 +440,34 @@ fun ProductGallery(
                         )
                     }
             )
+        }
+
+        // Стрелка «назад»
+        if (pagerState.currentPage > 0) {
+            IconButton(
+                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 4.dp)
+                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
+                    .size(36.dp),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Предыдущее фото", tint = Color.White)
+            }
+        }
+
+        // Стрелка «вперёд»
+        if (pagerState.currentPage < images.size - 1) {
+            IconButton(
+                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 4.dp)
+                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
+                    .size(36.dp),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Следующее фото", tint = Color.White)
+            }
         }
 
         if (images.size > 1) {
