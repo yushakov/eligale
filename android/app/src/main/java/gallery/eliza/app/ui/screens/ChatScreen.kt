@@ -346,7 +346,10 @@ fun ChatScreen(
     }
 
     fullscreenImageUrl?.let { url ->
-        FullscreenImageViewer(url = url, onDismiss = { fullscreenImageUrl = null })
+        FullscreenImageViewer(
+            images = listOf(gallery.eliza.app.data.ProductImage(id = 0, image_url = url, order = 0)),
+            onDismiss = { fullscreenImageUrl = null },
+        )
     }
     } // Box
 }

@@ -68,7 +68,7 @@ fun ProductDetailScreen(
     var showAuth by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     var sendingComment by remember { mutableStateOf(false) }
-    var fullscreenUrl by remember { mutableStateOf<String?>(null) }
+    var fullscreenState by remember { mutableStateOf<Pair<List<gallery.eliza.app.data.ProductImage>, Int>?>(null) }
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -233,7 +233,7 @@ fun ProductDetailScreen(
                                     ProductGallery(
                                         images = images,
                                         initialPage = initialImagePage,
-                                        onFullscreen = { url -> fullscreenUrl = url },
+                                        onFullscreen = { page -> fullscreenState = images to page },
                                         onChatButtonClick = when {
                                             onGoToChat != null && !isStaff -> { page -> chatDialogPage = page }
                                             onGoToChats != null && isStaff -> { page -> staffChatDialogPage = page }
@@ -386,12 +386,12 @@ fun ProductDetailScreen(
 
         // Полноэкранный просмотр с зумом
         AnimatedVisibility(
-            visible = fullscreenUrl != null,
+            visible = fullscreenState != null,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            fullscreenUrl?.let { url ->
-                FullscreenImageViewer(url = url, onDismiss = { fullscreenUrl = null })
+            fullscreenState?.let { (imgs, page) ->
+                FullscreenImageViewer(images = imgs, initialPage = page, onDismiss = { fullscreenState = null })
             }
         }
     }
@@ -403,7 +403,7 @@ fun ProductDetailScreen(
  *
  * @param images список фотографий
  * @param initialPage начальная страница (например, когда открываем конкретное фото из чата)
- * @param onFullscreen двойной тап → полноэкранный просмотр
+ * @param onFullscreen двойной тап → полноэкранный просмотр; вызывается с индексом страницы
  * @param onChatButtonClick если передан — показывает кнопку "В чат"; вызывается с текущей страницей
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -411,7 +411,7 @@ fun ProductDetailScreen(
 fun ProductGallery(
     images: List<gallery.eliza.app.data.ProductImage>,
     initialPage: Int = 0,
-    onFullscreen: (url: String) -> Unit,
+    onFullscreen: (page: Int) -> Unit,
     onChatButtonClick: ((page: Int) -> Unit)? = null,
 ) {
     val safeInitialPage = initialPage.coerceIn(0, (images.size - 1).coerceAtLeast(0))
@@ -434,9 +434,7 @@ fun ProductGallery(
                     .fillMaxSize()
                     .pointerInput(Unit) {
                         detectTapGestures(
-                            onDoubleTap = {
-                                images[page].image_url?.let { onFullscreen(it) }
-                            }
+                            onDoubleTap = { onFullscreen(page) }
                         )
                     }
             )
@@ -494,43 +492,102 @@ fun ProductGallery(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
+fun FullscreenImageViewer(
+    images: List<gallery.eliza.app.data.ProductImage>,
+    initialPage: Int = 0,
+    onDismiss: () -> Unit,
+) {
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { images.size },
+    )
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+
+    // Зум и смещение — общие для текущей страницы; сбрасываются при смене страницы
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+
+    LaunchedEffect(pagerState.currentPage) {
+        scale = 1f
+        offset = Offset.Zero
+    }
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         scale = (scale * zoomChange).coerceIn(1f, 8f)
         offset = if (scale > 1f) offset + panChange else Offset.Zero
     }
 
-    val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onDismiss() })
-            },
-        contentAlignment = Alignment.Center
+            .background(Color.Black),
+        contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = url,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offset.x,
-                    translationY = offset.y
+        // Свайп между страницами отключается когда зум > 1, чтобы не конфликтовать с панорамированием
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = scale <= 1f,
+        ) { page ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { onDismiss() })
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    model = images[page].image_url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offset.x,
+                            translationY = offset.y,
+                        )
+                        .transformable(state = transformState),
                 )
-                .transformable(state = transformState)
-        )
+            }
+        }
 
+        // Стрелка «назад»
+        if (pagerState.currentPage > 0) {
+            IconButton(
+                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 4.dp)
+                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
+                    .size(36.dp),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Предыдущее фото", tint = Color.White)
+            }
+        }
+
+        // Стрелка «вперёд»
+        if (pagerState.currentPage < images.size - 1) {
+            IconButton(
+                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 4.dp)
+                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
+                    .size(36.dp),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Следующее фото", tint = Color.White)
+            }
+        }
+
+        // Кнопки скачать / скопировать — берут URL текущей страницы
+        val currentUrl = images[pagerState.currentPage].image_url
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -540,21 +597,23 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
         ) {
             Button(
                 onClick = {
-                    val fileName = url.substringAfterLast("/").substringBefore("?")
-                        .ifBlank { "image.jpg" }
-                    val request = DownloadManager.Request(Uri.parse(url))
-                        .setTitle(fileName)
-                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    val dm = context.getSystemService(DownloadManager::class.java)
-                    dm.enqueue(request)
+                    if (currentUrl != null) {
+                        val fileName = currentUrl.substringAfterLast("/").substringBefore("?")
+                            .ifBlank { "image.jpg" }
+                        val request = DownloadManager.Request(Uri.parse(currentUrl))
+                            .setTitle(fileName)
+                            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        val dm = context.getSystemService(DownloadManager::class.java)
+                        dm.enqueue(request)
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.7f))
             ) {
                 Text("Скачать")
             }
             Button(
-                onClick = { clipboard.setText(AnnotatedString(url)) },
+                onClick = { clipboard.setText(AnnotatedString(currentUrl ?: "")) },
                 colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.7f))
             ) {
                 Text("Копировать ссылку")
