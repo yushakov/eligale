@@ -540,22 +540,7 @@ fun FullscreenImageViewer(
         val currentRealPage = pagerState.currentPage % images.size
         val currentUrl = images[currentRealPage].image_url
 
-        // Кнопка "В чат" — привязана к текущей фотографии
-        if (onChatButtonClick != null) {
-            Button(
-                onClick = { onChatButtonClick(currentRealPage) },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(end = 12.dp, top = 8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.85f)),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            ) {
-                Text("В чат", color = Color.White, fontSize = 13.sp)
-            }
-        }
-
-        // Кнопки скачать / скопировать
+        // Кнопки снизу: "В чат" + "Скачать" + "Ссылка"
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -563,6 +548,15 @@ fun FullscreenImageViewer(
                 .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (onChatButtonClick != null) {
+                Button(
+                    onClick = { onChatButtonClick(currentRealPage) },
+                    colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.85f)),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Text("В чат", color = Color.White, fontSize = 13.sp)
+                }
+            }
             Button(
                 onClick = {
                     if (currentUrl != null) {
@@ -584,7 +578,7 @@ fun FullscreenImageViewer(
                 onClick = { clipboard.setText(AnnotatedString(currentUrl ?: "")) },
                 colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.7f))
             ) {
-                Text("Копировать ссылку")
+                Text("Ссылка")
             }
         }
     }
