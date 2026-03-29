@@ -500,11 +500,13 @@ fun FullscreenImageViewer(
     initialPage: Int = 0,
     onDismiss: () -> Unit,
 ) {
+    // Cyclic pager: virtual page count is huge, real index = virtualPage % images.size.
+    // Start offset keeps the user near the center so they can swipe both ways indefinitely.
+    val startPage = images.size * 10_000 + initialPage.coerceIn(0, (images.size - 1).coerceAtLeast(0))
     val pagerState = rememberPagerState(
-        initialPage = initialPage,
-        pageCount = { images.size },
+        initialPage = startPage,
+        pageCount = { if (images.size > 1) Int.MAX_VALUE else 1 },
     )
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
 
@@ -528,7 +530,8 @@ fun FullscreenImageViewer(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = scale <= 1f,
-        ) { page ->
+        ) { virtualPage ->
+            val page = virtualPage % images.size
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -571,36 +574,8 @@ fun FullscreenImageViewer(
             }
         }
 
-        // Стрелка «назад»
-        if (pagerState.currentPage > 0) {
-            IconButton(
-                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 4.dp)
-                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
-                    .size(36.dp),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Предыдущее фото", tint = Color.White)
-            }
-        }
-
-        // Стрелка «вперёд»
-        if (pagerState.currentPage < images.size - 1) {
-            IconButton(
-                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 4.dp)
-                    .background(Color.Black.copy(alpha = 0.25f), shape = androidx.compose.foundation.shape.CircleShape)
-                    .size(36.dp),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Следующее фото", tint = Color.White)
-            }
-        }
-
         // Кнопки скачать / скопировать — берут URL текущей страницы
-        val currentUrl = images[pagerState.currentPage].image_url
+        val currentUrl = images[pagerState.currentPage % images.size].image_url
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
