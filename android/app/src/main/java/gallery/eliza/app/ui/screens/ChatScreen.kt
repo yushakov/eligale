@@ -352,7 +352,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(
+internal fun MessageBubble(
     msg: ChatMessage,
     isOwnMessage: Boolean,
     onOpenProduct: ((productId: Int, imageIndex: Int) -> Unit)? = null,
