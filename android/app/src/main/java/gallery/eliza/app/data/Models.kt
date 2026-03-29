@@ -12,6 +12,7 @@ data class Product(
     val id: Int,
     val name: String,
     val cover_url: String?,
+    val cover_url_300: String? = null,
     val created_at: String,
     val image_count: Int = 0
 )

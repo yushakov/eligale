@@ -55,14 +55,18 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     cover_url = serializers.SerializerMethodField()
+    cover_url_300 = serializers.SerializerMethodField()
     image_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'cover_url', 'created_at', 'image_count']
+        fields = ['id', 'name', 'cover_url', 'cover_url_300', 'created_at', 'image_count']
 
     def get_cover_url(self, obj):
         return _public_url(obj.cover_key)
+
+    def get_cover_url_300(self, obj):
+        return _public_url(thumbnail_key(obj.cover_key, 300)) if obj.cover_key else None
 
     def get_image_count(self, obj):
         return obj.images.count()

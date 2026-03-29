@@ -122,7 +122,7 @@ private fun ProductTile(product: Product, onClick: () -> Unit) {
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
-            model = product.cover_url,
+            model = product.cover_url_300 ?: product.cover_url,
             contentDescription = product.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
