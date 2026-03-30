@@ -12,6 +12,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -106,8 +107,8 @@ class MainActivity : ComponentActivity() {
                             onProductClick = { id ->
                                 navController.navigate("product/$id?categoryId=$catId&categoryName=${Uri.encode(catName)}")
                             },
-                            onBack = { navController.popBackStack() },
-                            onHome = { navController.popBackStack("categories", false) },
+                            onBack = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                         )
                     }
                     composable(
@@ -127,10 +128,12 @@ class MainActivity : ComponentActivity() {
                         ProductDetailScreen(
                             productId = backStack.arguments!!.getInt("productId"),
                             onBack = {
-                                if (categoryId > 0) {
-                                    navController.popBackStack()
-                                } else {
-                                    navController.popBackStack("categories", false)
+                                if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                    if (categoryId > 0) {
+                                        navController.popBackStack()
+                                    } else {
+                                        navController.popBackStack("categories", false)
+                                    }
                                 }
                             },
                             token = token,
@@ -150,28 +153,28 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("chats?pendingText=${Uri.encode(pendingText)}")
                                 }
                             } else null,
-                            onHome = { navController.popBackStack("categories", false) },
+                            onHome = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                         )
                     }
                     // Мои комментарии (пользователь)
-                    composable("my_comments") {
+                    composable("my_comments") { entry ->
                         val t = token ?: return@composable
                         MyCommentsScreen(
                             token = t,
-                            onBack = { navController.popBackStack() },
-                            onHome = { navController.popBackStack("categories", false) },
+                            onBack = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                             onOpenProduct = { productId, commentId ->
                                 navController.navigate("product/$productId?commentId=$commentId")
                             },
                         )
                     }
                     // Поиск
-                    composable("search") {
+                    composable("search") { entry ->
                         val t = token ?: return@composable
                         SearchScreen(
                             token = t,
-                            onBack = { navController.popBackStack() },
-                            onHome = { navController.popBackStack("categories", false) },
+                            onBack = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                             onOpenResult = { result ->
                                 when (result.type) {
                                     "comment" -> navController.navigate("product/${result.product_id}?commentId=${result.id}")
@@ -197,8 +200,8 @@ class MainActivity : ComponentActivity() {
                             token = t,
                             staffUserId = null,
                             chatTitle = "Чат с Елизаветой",
-                            onBack = { navController.popBackStack() },
-                            onHome = { navController.popBackStack("categories", false) },
+                            onBack = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                             onOpenProduct = { productId, imageIndex ->
                                 navController.navigate("product/$productId?imageIndex=$imageIndex")
                             },
@@ -206,7 +209,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     // Список комментариев (staff)
-                    composable("comments") {
+                    composable("comments") { entry ->
                         val t = token ?: return@composable
                         CommentListScreen(
                             token = t,
@@ -216,8 +219,8 @@ class MainActivity : ComponentActivity() {
                             onOpenProduct = { productId, commentId ->
                                 navController.navigate("product/$productId?commentId=$commentId")
                             },
-                            onBack = { navController.popBackStack() },
-                            onHome = { navController.popBackStack("categories", false) },
+                            onBack = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                         )
                     }
                     // Список чатов (staff)
@@ -234,8 +237,8 @@ class MainActivity : ComponentActivity() {
                             onChatClick = { userId, userEmail ->
                                 navController.navigate("chat_staff/$userId?email=$userEmail&initialText=${Uri.encode(pendingText)}")
                             },
-                            onBack = { navController.popBackStack() },
-                            onHome = { navController.popBackStack("categories", false) },
+                            onBack = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                         )
                     }
                     // Чат staff с конкретным пользователем
@@ -257,8 +260,8 @@ class MainActivity : ComponentActivity() {
                             token = t,
                             staffUserId = userId,
                             chatTitle = email,
-                            onBack = { navController.popBackStack() },
-                            onHome = { navController.popBackStack("categories", false) },
+                            onBack = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                             onOpenProduct = { productId, imageIndex ->
                                 navController.navigate("product/$productId?imageIndex=$imageIndex")
                             },
