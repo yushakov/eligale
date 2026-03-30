@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,6 +22,7 @@ import coil.compose.AsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Product
+import gallery.eliza.app.util.withRetry
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,12 +45,11 @@ fun ProductListScreen(
         loading = true
         error = null
         try {
-            products = Api.service.getProducts(categoryId)
+            products = withRetry { Api.service.getProducts(categoryId) }
         } catch (e: Exception) {
-            error = e.message
-        } finally {
-            loading = false
+            error = e.message ?: "Ошибка загрузки"
         }
+        loading = false
     }
 
     Scaffold(
@@ -125,6 +126,8 @@ private fun ProductTile(product: Product, onClick: () -> Unit) {
             model = product.cover_url_300 ?: product.cover_url,
             contentDescription = product.name,
             contentScale = ContentScale.Crop,
+            placeholder = ColorPainter(Color(0xFFE0E0E0)),
+            error = ColorPainter(Color(0xFFE0E0E0)),
             modifier = Modifier.fillMaxSize()
         )
         Text(

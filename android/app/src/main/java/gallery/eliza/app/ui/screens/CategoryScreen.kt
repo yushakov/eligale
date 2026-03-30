@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
@@ -24,6 +25,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
 import gallery.eliza.app.ui.theme.BrownDark
+import gallery.eliza.app.util.withRetry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -57,13 +59,12 @@ fun CategoryScreen(
         loading = true
         error = null
         try {
-            categories = Api.service.getCategories()
+            categories = withRetry { Api.service.getCategories() }
         } catch (e: Exception) {
-            error = e.message
-        } finally {
-            loading = false
-            onReady()
+            error = e.message ?: "Ошибка загрузки"
         }
+        loading = false
+        onReady()
     }
 
     // Polling счётчика непрочитанных чатов каждые 15 сек
@@ -185,7 +186,7 @@ fun CategoryScreen(
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
-                loading -> {}
+                loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 error != null -> Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -248,6 +249,8 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                         model = category.cover_url_600 ?: category.cover_url,
                         contentDescription = category.name,
                         contentScale = ContentScale.Crop,
+                        placeholder = ColorPainter(Color(0xFFE0E0E0)),
+                        error = ColorPainter(Color(0xFFE0E0E0)),
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(CircleShape)

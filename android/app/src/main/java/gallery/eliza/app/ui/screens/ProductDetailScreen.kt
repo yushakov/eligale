@@ -37,11 +37,13 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Comment
 import gallery.eliza.app.data.ProductDetail
 import gallery.eliza.app.ui.theme.BrownDark
+import gallery.eliza.app.util.withRetry
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -81,13 +83,14 @@ fun ProductDetailScreen(
         loading = true
         error = null
         try {
-            product = Api.service.getProduct(productId)
-            comments = Api.service.getComments(productId)
+            withRetry {
+                product = Api.service.getProduct(productId)
+                comments = Api.service.getComments(productId)
+            }
         } catch (e: Exception) {
-            error = e.message
-        } finally {
-            loading = false
+            error = e.message ?: "Ошибка загрузки"
         }
+        loading = false
     }
 
     // Автооткрытие fullscreen при переходе из чата по [product:id:page]
@@ -441,6 +444,8 @@ fun ProductGallery(
                             model = images[index].image_url_300 ?: images[index].image_url,
                             contentDescription = "Фото ${index + 1}",
                             contentScale = ContentScale.Crop,
+                            placeholder = ColorPainter(Color(0xFFE0E0E0)),
+                            error = ColorPainter(Color(0xFFE0E0E0)),
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
