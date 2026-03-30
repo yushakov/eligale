@@ -41,8 +41,11 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Comment
+import gallery.eliza.app.data.DataCache
 import gallery.eliza.app.data.ProductDetail
 import gallery.eliza.app.ui.theme.BrownDark
+import gallery.eliza.app.util.errorMessageForDisplay
+import gallery.eliza.app.util.shouldShowSpinner
 import gallery.eliza.app.util.withRetry
 import kotlinx.coroutines.launch
 
@@ -62,9 +65,9 @@ fun ProductDetailScreen(
     categoryName: String = "",
     onHome: () -> Unit = {},
 ) {
-    var product by remember { mutableStateOf<ProductDetail?>(null) }
-    var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    var product by remember { mutableStateOf(DataCache.productDetail[productId]) }
+    var comments by remember { mutableStateOf(DataCache.comments[productId] ?: emptyList()) }
+    var loading by remember { mutableStateOf(DataCache.productDetail[productId] == null) }
     var error by remember { mutableStateOf<String?>(null) }
     var showAuth by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
@@ -80,15 +83,19 @@ fun ProductDetailScreen(
     val listState = rememberLazyListState()
 
     LaunchedEffect(productId, retryKey) {
-        loading = true
+        if (shouldShowSpinner(product != null)) loading = true
         error = null
         try {
             withRetry {
-                product = Api.service.getProduct(productId)
-                comments = Api.service.getComments(productId)
+                val newProduct = Api.service.getProduct(productId)
+                val newComments = Api.service.getComments(productId)
+                DataCache.productDetail[productId] = newProduct
+                DataCache.comments[productId] = newComments
+                product = newProduct
+                comments = newComments
             }
         } catch (e: Exception) {
-            error = e.message ?: "Ошибка загрузки"
+            error = errorMessageForDisplay(product != null, e)
         }
         loading = false
     }

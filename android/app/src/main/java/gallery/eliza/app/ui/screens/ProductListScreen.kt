@@ -21,7 +21,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
+import gallery.eliza.app.data.DataCache
 import gallery.eliza.app.data.Product
+import gallery.eliza.app.util.errorMessageForDisplay
+import gallery.eliza.app.util.shouldShowSpinner
 import gallery.eliza.app.util.withRetry
 import kotlinx.coroutines.launch
 
@@ -34,20 +37,22 @@ fun ProductListScreen(
     onBack: () -> Unit,
     onHome: () -> Unit,
 ) {
-    var products by remember { mutableStateOf<List<Product>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    var products by remember { mutableStateOf(DataCache.products[categoryId] ?: emptyList()) }
+    var loading by remember { mutableStateOf(DataCache.products[categoryId] == null) }
     var error by remember { mutableStateOf<String?>(null) }
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(categoryId, retryKey) {
-        loading = true
+        if (shouldShowSpinner(products.isNotEmpty())) loading = true
         error = null
         try {
-            products = withRetry { Api.service.getProducts(categoryId) }
+            val result = withRetry { Api.service.getProducts(categoryId) }
+            DataCache.products[categoryId] = result
+            products = result
         } catch (e: Exception) {
-            error = e.message ?: "Ошибка загрузки"
+            error = errorMessageForDisplay(products.isNotEmpty(), e)
         }
         loading = false
     }

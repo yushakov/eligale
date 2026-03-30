@@ -24,7 +24,10 @@ import coil.compose.AsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
+import gallery.eliza.app.data.DataCache
 import gallery.eliza.app.ui.theme.BrownDark
+import gallery.eliza.app.util.errorMessageForDisplay
+import gallery.eliza.app.util.shouldShowSpinner
 import gallery.eliza.app.util.withRetry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -43,8 +46,8 @@ fun CategoryScreen(
     onSearchClick: () -> Unit,
     isStaff: Boolean,
 ) {
-    var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    var categories by remember { mutableStateOf(DataCache.categories ?: emptyList()) }
+    var loading by remember { mutableStateOf(DataCache.categories == null) }
     var error by remember { mutableStateOf<String?>(null) }
     var showAuth by remember { mutableStateOf(false) }
     var showAccount by remember { mutableStateOf(false) }
@@ -55,13 +58,20 @@ fun CategoryScreen(
     var unreadCommentCount by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
+    // Если кэш есть — сразу скрываем сплэш, не ждём сети
+    LaunchedEffect(Unit) {
+        if (DataCache.categories != null) onReady()
+    }
+
     LaunchedEffect(retryKey) {
-        loading = true
+        if (shouldShowSpinner(categories.isNotEmpty())) loading = true
         error = null
         try {
-            categories = withRetry { Api.service.getCategories() }
+            val result = withRetry { Api.service.getCategories() }
+            DataCache.categories = result
+            categories = result
         } catch (e: Exception) {
-            error = e.message ?: "Ошибка загрузки"
+            error = errorMessageForDisplay(categories.isNotEmpty(), e)
         }
         loading = false
         onReady()
