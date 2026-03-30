@@ -207,7 +207,7 @@ fun AuthDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (step) {
                     1 -> {
-                        Text("Мы отправим 6-значный код для подтверждения.")
+                        Text("Чат и Комментирование доступны при регистрации через электронную почту. Мы отправим вам 6-значный код для подтверждения.")
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it; error = null },
