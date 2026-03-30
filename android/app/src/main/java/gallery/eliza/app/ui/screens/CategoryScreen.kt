@@ -25,6 +25,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
 import gallery.eliza.app.data.DataCache
+import gallery.eliza.app.data.DiskCache
 import gallery.eliza.app.ui.theme.BrownDark
 import gallery.eliza.app.util.errorMessageForDisplay
 import gallery.eliza.app.util.shouldShowSpinner
@@ -69,6 +70,7 @@ fun CategoryScreen(
         try {
             val result = withRetry { Api.service.getCategories() }
             DataCache.categories = result
+            DiskCache.saveCategories(result)
             categories = result
         } catch (e: Exception) {
             error = errorMessageForDisplay(categories.isNotEmpty(), e)

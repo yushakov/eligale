@@ -22,6 +22,7 @@ import coil.compose.AsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.DataCache
+import gallery.eliza.app.data.DiskCache
 import gallery.eliza.app.data.Product
 import gallery.eliza.app.util.errorMessageForDisplay
 import gallery.eliza.app.util.shouldShowSpinner
@@ -50,6 +51,7 @@ fun ProductListScreen(
         try {
             val result = withRetry { Api.service.getProducts(categoryId) }
             DataCache.products[categoryId] = result
+            DiskCache.saveProducts(categoryId, result)
             products = result
         } catch (e: Exception) {
             error = errorMessageForDisplay(products.isNotEmpty(), e)

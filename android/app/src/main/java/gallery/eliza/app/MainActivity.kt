@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import gallery.eliza.app.data.Api
+import gallery.eliza.app.data.DiskCache
 import gallery.eliza.app.data.TokenStorage
 import gallery.eliza.app.ui.screens.CategoryScreen
 import gallery.eliza.app.ui.screens.ChatListScreen
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        DiskCache.init(applicationContext)
         setContent {
             ElizaGalleryTheme {
                 val context = LocalContext.current

@@ -42,6 +42,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Comment
 import gallery.eliza.app.data.DataCache
+import gallery.eliza.app.data.DiskCache
 import gallery.eliza.app.data.ProductDetail
 import gallery.eliza.app.ui.theme.BrownDark
 import gallery.eliza.app.util.errorMessageForDisplay
@@ -91,6 +92,8 @@ fun ProductDetailScreen(
                 val newComments = Api.service.getComments(productId)
                 DataCache.productDetail[productId] = newProduct
                 DataCache.comments[productId] = newComments
+                DiskCache.saveProductDetail(productId, newProduct)
+                DiskCache.saveComments(productId, newComments)
                 product = newProduct
                 comments = newComments
             }
