@@ -407,9 +407,10 @@ fun ProductDetailScreen(
                     initialPage = page,
                     onDismiss = { fullscreenState = null },
                     onChatButtonClick = when {
-                        onGoToChat != null && !isStaff -> { p -> chatDialogPage = p }
-                        onGoToChats != null && isStaff -> { p -> staffChatDialogPage = p }
-                        else -> null
+                        isStaff && onGoToChats != null -> { p -> staffChatDialogPage = p }
+                        isStaff -> null
+                        token != null -> { p -> chatDialogPage = p }
+                        else -> { _ -> showAuth = true }
                     },
                 )
             }
