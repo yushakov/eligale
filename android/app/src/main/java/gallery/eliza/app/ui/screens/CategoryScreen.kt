@@ -161,7 +161,7 @@ fun CategoryScreen(
                                         trailingIcon = if (unreadCount > 0) {{ RedDot() }} else null,
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Комменты") },
+                                        text = { Text("Комментарии") },
                                         onClick = { showMenu = false; onCommentsClick() },
                                         trailingIcon = if (unreadCommentCount > 0) {{ RedDot() }} else null,
                                     )
@@ -172,7 +172,7 @@ fun CategoryScreen(
                                         trailingIcon = if (unreadCount > 0) {{ RedDot() }} else null,
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Комменты") },
+                                        text = { Text("Комментарии") },
                                         onClick = { showMenu = false; onMyCommentsClick() },
                                     )
                                 }
