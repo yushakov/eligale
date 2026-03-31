@@ -297,7 +297,7 @@ def test_favorites(base, token, prod_id):
 
     # Без токена — 401
     r = get(base, "/api/favorites/")
-    check(r and r.status_code == 401,
+    check(r is not None and r.status_code == 401,
           "GET /api/favorites/ без токена → 401",
           "Favorites should require auth", f"status={status(r)}")
 
