@@ -26,6 +26,7 @@ import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
 import gallery.eliza.app.data.DataCache
 import gallery.eliza.app.data.DiskCache
+import gallery.eliza.app.data.FavoriteItem
 import gallery.eliza.app.ui.theme.BrownDark
 import gallery.eliza.app.util.errorMessageForDisplay
 import gallery.eliza.app.util.shouldShowSpinner
@@ -45,6 +46,7 @@ fun CategoryScreen(
     onCommentsClick: () -> Unit,
     onMyCommentsClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onFavoritesClick: () -> Unit,
     isStaff: Boolean,
 ) {
     var categories by remember { mutableStateOf(DataCache.categories ?: emptyList()) }
@@ -93,6 +95,16 @@ fun CategoryScreen(
             } catch (_: Exception) { }
             delay(15_000)
         }
+    }
+
+    // Загружаем список избранного один раз при смене токена
+    LaunchedEffect(token) {
+        if (token == null) { DataCache.favoriteProductIds.clear(); return@LaunchedEffect }
+        try {
+            val favs = Api.service.getFavorites("Token $token")
+            DataCache.favoriteProductIds.clear()
+            DataCache.favoriteProductIds.addAll(favs.map { it.product_id })
+        } catch (_: Exception) { }
     }
 
     // Polling непрочитанных комментариев (только для staff) — считаем из того же списка,
@@ -176,6 +188,10 @@ fun CategoryScreen(
                                         onClick = { showMenu = false; onMyCommentsClick() },
                                     )
                                 }
+                                DropdownMenuItem(
+                                    text = { Text("Избранное") },
+                                    onClick = { showMenu = false; onFavoritesClick() },
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Поиск") },
                                     onClick = { showMenu = false; onSearchClick() },

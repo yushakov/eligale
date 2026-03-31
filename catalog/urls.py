@@ -14,6 +14,8 @@ urlpatterns = [
     path('api/staff/comments/unread/', views.staff_comment_unread, name='staff_comment_unread'),
     path('api/staff/comments/<int:comment_id>/mark-read/', views.staff_comment_mark_read, name='staff_comment_mark_read'),
     path('api/staff/comments/<int:comment_id>/delete/', views.staff_comment_delete, name='staff_comment_delete'),
+    path('api/favorites/', views.favorites, name='favorites'),
+    path('api/favorites/<int:product_id>/', views.favorite_delete, name='favorite_delete'),
 
     # Mobile
     path('mobile/', views.mobile_home, name='mobile_home'),

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import Category, Product, ProductImage, Comment
+from .models import Category, Product, ProductImage, Comment, Favorite
 from .thumbnails import thumbnail_key
 
 
@@ -95,6 +95,23 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_author(self, obj):
         return obj.user.display_name or obj.user.email.split('@')[0]
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source='product.id', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    cover_url = serializers.SerializerMethodField()
+    cover_url_100 = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Favorite
+        fields = ['product_id', 'product_name', 'cover_url', 'cover_url_100', 'created_at']
+
+    def get_cover_url(self, obj):
+        return _public_url(obj.product.cover_key)
+
+    def get_cover_url_100(self, obj):
+        return _public_url(thumbnail_key(obj.product.cover_key, 100)) if obj.product.cover_key else None
 
 
 class StaffCommentSerializer(serializers.ModelSerializer):

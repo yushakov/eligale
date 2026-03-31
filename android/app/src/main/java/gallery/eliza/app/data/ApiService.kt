@@ -76,6 +76,23 @@ interface ApiService {
         @Path("id") commentId: Int,
     )
 
+    // ── Избранное ─────────────────────────────────────────────────────────────
+
+    @GET("api/favorites/")
+    suspend fun getFavorites(@Header("Authorization") token: String): List<FavoriteItem>
+
+    @POST("api/favorites/")
+    suspend fun addFavorite(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, Int>,
+    )
+
+    @DELETE("api/favorites/{productId}/")
+    suspend fun deleteFavorite(
+        @Header("Authorization") token: String,
+        @Path("productId") productId: Int,
+    )
+
     // ── Медиа в чате ──────────────────────────────────────────────────────────
 
     @POST("api/chat/media/presign/")

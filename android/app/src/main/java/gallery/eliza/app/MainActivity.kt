@@ -25,6 +25,7 @@ import gallery.eliza.app.ui.screens.CategoryScreen
 import gallery.eliza.app.ui.screens.ChatListScreen
 import gallery.eliza.app.ui.screens.ChatScreen
 import gallery.eliza.app.ui.screens.CommentListScreen
+import gallery.eliza.app.ui.screens.FavoritesScreen
 import gallery.eliza.app.ui.screens.ProductDetailScreen
 import gallery.eliza.app.ui.screens.ProductListScreen
 import gallery.eliza.app.ui.screens.MyCommentsScreen
@@ -91,6 +92,7 @@ class MainActivity : ComponentActivity() {
                             onCommentsClick = { navController.navigate("comments") },
                             onMyCommentsClick = { navController.navigate("my_comments") },
                             onSearchClick = { navController.navigate("search") },
+                            onFavoritesClick = { navController.navigate("favorites") },
                             isStaff = isStaff,
                         )
                     }
@@ -156,6 +158,18 @@ class MainActivity : ComponentActivity() {
                                 }
                             } else null,
                             onHome = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
+                        )
+                    }
+                    // Избранное
+                    composable("favorites") { entry ->
+                        val t = token ?: return@composable
+                        FavoritesScreen(
+                            token = t,
+                            onBack = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
+                            onOpenProduct = { productId ->
+                                navController.navigate("product/$productId")
+                            },
                         )
                     }
                     // Мои комментарии (пользователь)

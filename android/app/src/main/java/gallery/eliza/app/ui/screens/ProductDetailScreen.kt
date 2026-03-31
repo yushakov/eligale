@@ -18,6 +18,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -80,8 +82,29 @@ fun ProductDetailScreen(
     var staffChatDialogPage by remember { mutableStateOf<Int?>(null) }
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var isFavorited by remember { mutableStateOf(token != null && productId in DataCache.favoriteProductIds) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+
+    val onFavoriteToggle: () -> Unit = {
+        if (token == null) {
+            showAuth = true
+        } else if (isFavorited) {
+            isFavorited = false
+            DataCache.favoriteProductIds.remove(productId)
+            scope.launch {
+                try { Api.service.deleteFavorite("Token $token", productId) }
+                catch (_: Exception) { isFavorited = true; DataCache.favoriteProductIds.add(productId) }
+            }
+        } else {
+            isFavorited = true
+            DataCache.favoriteProductIds.add(productId)
+            scope.launch {
+                try { Api.service.addFavorite("Token $token", mapOf("product_id" to productId)) }
+                catch (_: Exception) { isFavorited = false; DataCache.favoriteProductIds.remove(productId) }
+            }
+        }
+    }
 
     LaunchedEffect(productId, retryKey) {
         if (shouldShowSpinner(product != null)) loading = true
@@ -264,6 +287,21 @@ fun ProductDetailScreen(
                                 }
                             }
 
+                            // Иконка «Избранное» под галереей
+                            item {
+                                Row(
+                                    modifier = Modifier.padding(start = 8.dp, top = 4.dp),
+                                ) {
+                                    IconButton(onClick = onFavoriteToggle) {
+                                        Icon(
+                                            imageVector = if (isFavorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                            contentDescription = if (isFavorited) "Убрать из избранного" else "В избранное",
+                                            tint = if (isFavorited) Color(0xFFE53935) else BrownDark,
+                                        )
+                                    }
+                                }
+                            }
+
                             // Описание
                             if (product!!.description.isNotBlank()) {
                                 item {
@@ -422,6 +460,8 @@ fun ProductDetailScreen(
                         token != null -> { p -> chatDialogPage = p }
                         else -> { _ -> showAuth = true }
                     },
+                    isFavorited = isFavorited,
+                    onFavoriteClick = onFavoriteToggle,
                 )
             }
         }
@@ -478,6 +518,8 @@ fun FullscreenImageViewer(
     initialPage: Int = 0,
     onDismiss: () -> Unit,
     onChatButtonClick: ((page: Int) -> Unit)? = null,
+    isFavorited: Boolean = false,
+    onFavoriteClick: (() -> Unit)? = null,
 ) {
     // Cyclic pager: virtual page count is huge, real index = virtualPage % images.size.
     // Start offset keeps the user near the center so they can swipe both ways indefinitely.
@@ -556,14 +598,25 @@ fun FullscreenImageViewer(
         val currentRealPage = pagerState.currentPage % images.size
         val currentUrl = images[currentRealPage].image_url
 
-        // Кнопки снизу: "В чат" + "Скачать" + "Ссылка"
+        // Кнопки снизу: "★" + "В чат" + "Скачать" + "Ссылка"
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (onFavoriteClick != null) {
+                IconButton(onClick = onFavoriteClick) {
+                    Icon(
+                        imageVector = if (isFavorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (isFavorited) "Убрать из избранного" else "В избранное",
+                        tint = if (isFavorited) Color(0xFFE53935) else Color.White,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
             if (onChatButtonClick != null) {
                 Button(
                     onClick = { onChatButtonClick(currentRealPage) },

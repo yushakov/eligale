@@ -109,3 +109,11 @@ data class TokenResponse(val token: String, val has_name: Boolean)
 data class SetNameBody(val name: String)
 data class SetNameResponse(val display_name: String)
 data class PresignResponse(val upload_url: String, val public_url: String)
+
+data class FavoriteItem(
+    val product_id: Int,
+    val product_name: String,
+    val cover_url: String?,
+    val cover_url_100: String?,
+    val created_at: String,
+)

@@ -21,8 +21,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import authentication_classes, permission_classes
 
-from .models import Category, Product, ProductImage, Comment
-from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer
+from .models import Category, Product, ProductImage, Comment, Favorite
+from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer, FavoriteSerializer
 
 
 def _make_snippet(text: str, query: str, context: int = 80) -> str:
@@ -484,3 +484,29 @@ def mobile_product_toggle_hidden(request, pk):
     product.is_hidden = not product.is_hidden
     product.save(update_fields=['is_hidden'])
     return JsonResponse({'ok': True, 'is_hidden': product.is_hidden})
+
+
+# ── Избранное ─────────────────────────────────────────────────────────────────
+
+@api_view(['GET', 'POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def favorites(request):
+    if request.method == 'GET':
+        favs = Favorite.objects.filter(user=request.user).select_related('product')
+        return Response(FavoriteSerializer(favs, many=True).data)
+
+    product_id = request.data.get('product_id')
+    if not product_id:
+        return Response({'error': 'product_id required'}, status=status.HTTP_400_BAD_REQUEST)
+    product = get_object_or_404(Product, pk=product_id, is_hidden=False)
+    _, created = Favorite.objects.get_or_create(user=request.user, product=product)
+    return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def favorite_delete(request, product_id):
+    Favorite.objects.filter(user=request.user, product_id=product_id).delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
