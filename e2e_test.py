@@ -91,6 +91,10 @@ def post(base, path, **kw):
     return _req(requests.post, base, path, **kw)
 
 
+def delete(base, path, **kw):
+    return _req(requests.delete, base, path, **kw)
+
+
 def status(r):
     return r.status_code if r is not None else "no response"
 
@@ -224,6 +228,78 @@ def test_authenticated_user(base, token, prod_id):
         check("upload_url" in data and "public_url" in data,
               "Chat presign: поля upload_url + public_url есть",
               "Chat presign: поля отсутствуют", f"keys={list(data.keys())}")
+
+    if prod_id:
+        test_favorites(base, token, prod_id)
+
+
+# ── Section: Favorites ────────────────────────────────────────────────────────
+
+def test_favorites(base, token, prod_id):
+    section("Favorites API")
+    auth = {"Authorization": f"Token {token}"}
+
+    # Список изначально не содержит тестовый товар
+    r = get(base, "/api/favorites/", headers=auth)
+    if not check(r and r.status_code == 200, "GET /api/favorites/ → 200",
+                 "Favorites list failed", f"status={status(r)}"):
+        return
+    initial_ids = [f["product_id"] for f in r.json()]
+    # Если уже в избранном — удалим, чтобы тест был воспроизводимым
+    if prod_id in initial_ids:
+        delete(base, f"/api/favorites/{prod_id}/", headers=auth)
+
+    # Добавить в избранное
+    r = post(base, "/api/favorites/", json={"product_id": prod_id}, headers=auth)
+    check(r and r.status_code == 201,
+          f"POST /api/favorites/ → 201 (добавлен product_id={prod_id})",
+          "Add favorite failed", f"status={status(r)} body={r.text if r else ''}")
+
+    # Повторное добавление — идемпотентно, 200
+    r = post(base, "/api/favorites/", json={"product_id": prod_id}, headers=auth)
+    check(r and r.status_code == 200,
+          "POST /api/favorites/ повторно → 200 (идемпотентно)",
+          "Duplicate add should return 200", f"status={status(r)}")
+
+    # Товар виден в списке, поля присутствуют
+    r = get(base, "/api/favorites/", headers=auth)
+    if check(r and r.status_code == 200, "GET /api/favorites/ после добавления → 200",
+             "Favorites list failed", f"status={status(r)}"):
+        items = r.json()
+        found = next((f for f in items if f["product_id"] == prod_id), None)
+        if check(found is not None, f"Товар {prod_id} есть в избранном",
+                 f"Товар {prod_id} НЕ найден в избранном"):
+            for field in ["product_id", "product_name", "cover_url", "cover_url_100", "created_at"]:
+                check(field in found,
+                      f"  поле '{field}' присутствует",
+                      f"  поле '{field}' отсутствует", f"keys={list(found.keys())}")
+
+    # Удалить из избранного
+    r = delete(base, f"/api/favorites/{prod_id}/", headers=auth)
+    check(r and r.status_code == 204,
+          f"DELETE /api/favorites/{prod_id}/ → 204",
+          "Delete favorite failed", f"status={status(r)}")
+
+    # После удаления товара нет в списке
+    r = get(base, "/api/favorites/", headers=auth)
+    if check(r and r.status_code == 200, "GET /api/favorites/ после удаления → 200",
+             "Favorites list failed", f"status={status(r)}"):
+        ids_after = [f["product_id"] for f in r.json()]
+        check(prod_id not in ids_after,
+              f"Товар {prod_id} удалён из избранного",
+              f"Товар {prod_id} всё ещё в избранном после DELETE")
+
+    # Повторное удаление — 204 (idempotent)
+    r = delete(base, f"/api/favorites/{prod_id}/", headers=auth)
+    check(r and r.status_code == 204,
+          "DELETE повторно → 204 (идемпотентно)",
+          "Repeated delete should return 204", f"status={status(r)}")
+
+    # Без токена — 401
+    r = get(base, "/api/favorites/")
+    check(r and r.status_code == 401,
+          "GET /api/favorites/ без токена → 401",
+          "Favorites should require auth", f"status={status(r)}")
 
 
 # ── Section: Staff API ────────────────────────────────────────────────────────
