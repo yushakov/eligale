@@ -24,6 +24,6 @@ echo "==> collectstatic"
 python manage.py collectstatic --noinput
 
 echo "==> restart gunicorn"
-systemctl restart gunicorn
+sudo systemctl restart gunicorn
 
 echo "==> done"
