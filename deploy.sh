@@ -1,15 +1,20 @@
 #!/bin/bash
 set -e
 
+# Read APP_FOLDER from .env
+APP_FOLDER=$(grep '^APP_FOLDER=' .env | cut -d'=' -f2-)
+if [ -z "$APP_FOLDER" ]; then
+    echo "ERROR: APP_FOLDER not set in .env"
+    exit 1
+fi
+
 echo "==> git pull"
 git pull
 
-cd /home
-
 echo "==> pip install"
-source venv/bin/activate
+source "$APP_FOLDER/venv/bin/activate"
 
-cd eliza_app
+cd "$APP_FOLDER/eliza_app"
 pip install -r requirements.txt
 
 echo "==> migrate"
