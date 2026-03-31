@@ -46,6 +46,9 @@ ALLOWED_HOSTS = ["eliza.gallery"] + _extra_hosts
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://eliza.gallery",
+]
 
 # Application definition
 
