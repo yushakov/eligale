@@ -41,7 +41,8 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 
-ALLOWED_HOSTS = ["eliza.gallery", "127.0.0.1", "localhost"]
+_extra_hosts = [h.strip() for h in os.getenv("DJANGO_EXTRA_ALLOWED_HOSTS", "").split(",") if h.strip()]
+ALLOWED_HOSTS = ["eliza.gallery"] + _extra_hosts
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
