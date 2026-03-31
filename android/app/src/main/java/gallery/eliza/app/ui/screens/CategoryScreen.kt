@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import gallery.eliza.app.BuildConfig
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.Category
 import gallery.eliza.app.data.DataCache
@@ -204,6 +205,19 @@ fun CategoryScreen(
                                 DropdownMenuItem(
                                     text = { Text("Войти") },
                                     onClick = { showMenu = false; showAuth = true },
+                                )
+                            }
+                            HorizontalDivider()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.CenterEnd,
+                            ) {
+                                Text(
+                                    text = "v${BuildConfig.VERSION_NAME}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
