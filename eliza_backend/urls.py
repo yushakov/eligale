@@ -16,13 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from main.views import index
+from main.views import index, privacy, privacy_ru
 
 urlpatterns = [
     path("", include("uploader.urls")),
     path("", include("catalog.urls")),
     path("", include("users.urls")),
     path("", include("chat.urls")),
+    path("privacy/", privacy, name="privacy"),
+    path("privacy-ru/", privacy_ru, name="privacy_ru"),
     path("", index),
     path('admin/', admin.site.urls),
 ]
