@@ -1,5 +1,8 @@
 package gallery.eliza.app.ui.screens
 
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -10,12 +13,55 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.RequestCodeBody
 import gallery.eliza.app.data.SetNameBody
 import gallery.eliza.app.data.VerifyCodeBody
 import kotlinx.coroutines.launch
+
+@Composable
+fun LegalPageDialog(url: String, onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.85f)
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView,
+                                    request: WebResourceRequest
+                                ): Boolean {
+                                    val path = request.url.path ?: ""
+                                    return !(path.startsWith("/privacy") || path.startsWith("/termsofuse"))
+                                }
+                            }
+                            loadUrl(url)
+                        }
+                    },
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Text("Закрыть")
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun AccountDialog(
@@ -33,6 +79,8 @@ fun AccountDialog(
     var error by remember { mutableStateOf<String?>(null) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showPrivacy by remember { mutableStateOf(false) }
+    var showTerms by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -67,6 +115,26 @@ fun AccountDialog(
                 if (loadingProfile) {
                     CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
                 } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = { showPrivacy = true },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        ) {
+                            Text("Конфиденциальность", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(
+                            onClick = { showTerms = true },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        ) {
+                            Text("Правила", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
                     OutlinedTextField(
                         value = email,
                         onValueChange = {},
@@ -130,6 +198,14 @@ fun AccountDialog(
                 }
             }
         }
+    }
+
+    if (showPrivacy) {
+        LegalPageDialog(url = "https://eliza.gallery/privacy-ru/", onDismiss = { showPrivacy = false })
+    }
+
+    if (showTerms) {
+        LegalPageDialog(url = "https://eliza.gallery/termsofuse-ru/", onDismiss = { showTerms = false })
     }
 
     if (showSignOutConfirm) {
