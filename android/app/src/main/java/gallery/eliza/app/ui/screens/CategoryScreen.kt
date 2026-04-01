@@ -113,12 +113,15 @@ fun CategoryScreen(
         } catch (_: Exception) { }
     }
 
-    // Проверка обновления приложения — один раз при запуске
+    // Проверка обновления приложения — при запуске и затем раз в час
     LaunchedEffect(Unit) {
-        try {
-            val info = Api.service.getLatestAppVersion()
-            if (info.version_code > BuildConfig.VERSION_CODE) updateInfo = info
-        } catch (_: Exception) { }
+        while (true) {
+            try {
+                val info = Api.service.getLatestAppVersion()
+                if (info.version_code > BuildConfig.VERSION_CODE) updateInfo = info
+            } catch (_: Exception) { }
+            delay(60 * 60 * 1_000L)
+        }
     }
 
     // Polling непрочитанных комментариев (только для staff) — считаем из того же списка,
