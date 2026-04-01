@@ -17,3 +17,6 @@ def termsofuse_ru(request):
 
 def consent_ru(request):
     return render(request, 'consent_ru.html')
+
+def consent_en(request):
+    return render(request, 'consent_en.html')

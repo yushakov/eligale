@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from main.views import index, privacy, privacy_ru, termsofuse, termsofuse_ru, consent_ru
+from main.views import index, privacy, privacy_ru, termsofuse, termsofuse_ru, consent_ru, consent_en
 
 urlpatterns = [
     path("", include("uploader.urls")),
@@ -28,6 +28,7 @@ urlpatterns = [
     path("termsofuse/", termsofuse, name="termsofuse"),
     path("termsofuse-ru/", termsofuse_ru, name="termsofuse_ru"),
     path("consent-ru/", consent_ru, name="consent_ru"),
+    path("consent-en/", consent_en, name="consent_en"),
     path("", index),
     path('admin/', admin.site.urls),
 ]

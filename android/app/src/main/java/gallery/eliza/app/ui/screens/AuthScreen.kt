@@ -1,5 +1,9 @@
 package gallery.eliza.app.ui.screens
 
+import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -256,16 +260,29 @@ fun AccountDialog(
     }
 }
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ConsentDialog(
     token: String,
     onConfirmed: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var lang by remember { mutableStateOf("ru") }
+    var scrolledToBottom by remember { mutableStateOf(false) }
     var checked by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    val webViewRef = remember { mutableStateOf<WebView?>(null) }
+
+    LaunchedEffect(lang) {
+        scrolledToBottom = false
+        checked = false
+        error = null
+        val url = if (lang == "ru") "https://eliza.gallery/consent-ru/" else "https://eliza.gallery/consent-en/"
+        webViewRef.value?.loadUrl(url)
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -281,17 +298,56 @@ fun ConsentDialog(
                 AndroidView(
                     factory = { context ->
                         WebView(context).apply {
+                            settings.javaScriptEnabled = true
+                            addJavascriptInterface(object : Any() {
+                                @JavascriptInterface
+                                fun onBottom() {
+                                    mainHandler.post { scrolledToBottom = true }
+                                }
+                            }, "AndroidScroll")
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(
                                     view: WebView,
                                     request: WebResourceRequest
-                                ): Boolean = true // блокируем все внешние переходы
+                                ): Boolean = true
+                                override fun onPageFinished(view: WebView, url: String) {
+                                    view.evaluateJavascript("""
+                                        (function() {
+                                            function check() {
+                                                if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 100) {
+                                                    AndroidScroll.onBottom();
+                                                }
+                                            }
+                                            window.addEventListener('scroll', function() { check(); });
+                                            check();
+                                        })();
+                                    """.trimIndent(), null)
+                                }
                             }
                             loadUrl("https://eliza.gallery/consent-ru/")
-                        }
+                        }.also { webViewRef.value = it }
                     },
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 )
+                HorizontalDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = { lang = "ru" },
+                        enabled = lang != "ru",
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) { Text("RU") }
+                    Text("·", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(
+                        onClick = { lang = "en" },
+                        enabled = lang != "en",
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) { Text("EN") }
+                }
                 HorizontalDivider()
                 Row(
                     modifier = Modifier
@@ -301,10 +357,14 @@ fun ConsentDialog(
                 ) {
                     Checkbox(
                         checked = checked,
-                        onCheckedChange = { checked = it; error = null }
+                        onCheckedChange = { checked = it; error = null },
+                        enabled = scrolledToBottom
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text("Соглашаюсь", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        if (lang == "ru") "Соглашаюсь" else "I agree",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
                 error?.let {
                     Text(
@@ -316,7 +376,10 @@ fun ConsentDialog(
                 }
                 TextButton(
                     onClick = {
-                        if (!checked) { error = "Необходимо принять условия"; return@TextButton }
+                        if (!checked) {
+                            error = if (lang == "ru") "Необходимо принять условия" else "Please accept the terms"
+                            return@TextButton
+                        }
                         scope.launch {
                             loading = true
                             error = null
@@ -324,19 +387,19 @@ fun ConsentDialog(
                                 Api.service.recordConsent("Token $token")
                                 onConfirmed()
                             } catch (e: Exception) {
-                                error = "Ошибка. Попробуйте ещё раз."
+                                error = if (lang == "ru") "Ошибка. Попробуйте ещё раз." else "Error. Please try again."
                             } finally {
                                 loading = false
                             }
                         }
                     },
-                    enabled = !loading,
+                    enabled = checked && !loading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     if (loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text("Подтвердить")
+                    else Text(if (lang == "ru") "Подтвердить" else "Confirm")
                 }
             }
         }
