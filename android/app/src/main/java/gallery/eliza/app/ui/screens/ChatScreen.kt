@@ -221,17 +221,24 @@ fun ChatScreen(
                 }
             )
         },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
-        Column(
+        Box(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()  // Box сжимается когда появляется клавиатура
         ) {
+            // Список сообщений занимает весь Box, нижний contentPadding освобождает место под поле ввода
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 8.dp,
+                    bottom = 80.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 // Начало переписки или кнопка "Загрузить историю"
@@ -292,54 +299,62 @@ fun ChatScreen(
                         onImageDoubleTap = { url -> fullscreenImageUrl = url },
                     )
                 }
-
-                item { Spacer(Modifier.height(4.dp)) }
             }
 
-            Row(
+            // Поле ввода плавает у нижнего края Box (Box уже сжат на высоту клавиатуры)
+            Column(
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .background(MaterialTheme.colorScheme.surface)
+                    .navigationBarsPadding(),  // отступ для навигационной панели (Samsung и др.)
             ) {
-                IconButton(
-                    onClick = { imagePicker.launch("image/*") },
-                    enabled = !sending,
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("🖼", fontSize = 20.sp)
-                }
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Сообщение...") },
-                    shape = RoundedCornerShape(24.dp),
-                    maxLines = 4,
-                )
-                Spacer(Modifier.width(8.dp))
-                IconButton(
-                    onClick = {
-                        val text = inputText.trim()
-                        if (text.isEmpty() || sending) return@IconButton
-                        sending = true
-                        scope.launch {
-                            try {
-                                val msg = if (staffUserId == null) {
-                                    Api.service.sendChatMessage("Token $token", mapOf("text" to text))
-                                } else {
-                                    Api.service.sendStaffChatMessage("Token $token", staffUserId, mapOf("text" to text))
-                                }
-                                dao.insertAll(listOf(msg.toEntity(chatUserId)))
-                                messages = dao.getAll(chatUserId).map { it.toModel() }
-                                inputText = ""
-                                listState.animateScrollToItem(messages.size - 1)
-                            } catch (_: Exception) { }
-                            sending = false
-                        }
-                    },
-                    enabled = inputText.isNotBlank() && !sending,
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить", tint = BrownDark)
+                    IconButton(
+                        onClick = { imagePicker.launch("image/*") },
+                        enabled = !sending,
+                    ) {
+                        Text("🖼", fontSize = 20.sp)
+                    }
+                    OutlinedTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Сообщение...") },
+                        shape = RoundedCornerShape(24.dp),
+                        maxLines = 4,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(
+                        onClick = {
+                            val text = inputText.trim()
+                            if (text.isEmpty() || sending) return@IconButton
+                            sending = true
+                            scope.launch {
+                                try {
+                                    val msg = if (staffUserId == null) {
+                                        Api.service.sendChatMessage("Token $token", mapOf("text" to text))
+                                    } else {
+                                        Api.service.sendStaffChatMessage("Token $token", staffUserId, mapOf("text" to text))
+                                    }
+                                    dao.insertAll(listOf(msg.toEntity(chatUserId)))
+                                    messages = dao.getAll(chatUserId).map { it.toModel() }
+                                    inputText = ""
+                                    listState.animateScrollToItem(messages.size - 1)
+                                } catch (_: Exception) { }
+                                sending = false
+                            }
+                        },
+                        enabled = inputText.isNotBlank() && !sending,
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить", tint = BrownDark)
+                    }
                 }
             }
         }
