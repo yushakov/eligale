@@ -56,6 +56,9 @@ interface ApiService {
     @DELETE("api/auth/delete-account/")
     suspend fun deleteAccount(@Header("Authorization") token: String)
 
+    @POST("api/auth/record-consent/")
+    suspend fun recordConsent(@Header("Authorization") token: String)
+
     // ── Staff комментарии ─────────────────────────────────────────────────────
 
     @GET("api/staff/comments/")

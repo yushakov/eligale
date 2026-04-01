@@ -257,6 +257,93 @@ fun AccountDialog(
 }
 
 @Composable
+fun ConsentDialog(
+    token: String,
+    onConfirmed: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var checked by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.9f)
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView,
+                                    request: WebResourceRequest
+                                ): Boolean = true // блокируем все внешние переходы
+                            }
+                            loadUrl("https://eliza.gallery/consent-ru/")
+                        }
+                    },
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = checked,
+                        onCheckedChange = { checked = it; error = null }
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Соглашаюсь", style = MaterialTheme.typography.bodyMedium)
+                }
+                error?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+                TextButton(
+                    onClick = {
+                        if (!checked) { error = "Необходимо принять условия"; return@TextButton }
+                        scope.launch {
+                            loading = true
+                            error = null
+                            try {
+                                Api.service.recordConsent("Token $token")
+                                onConfirmed()
+                            } catch (e: Exception) {
+                                error = "Ошибка. Попробуйте ещё раз."
+                            } finally {
+                                loading = false
+                            }
+                        }
+                    },
+                    enabled = !loading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    if (loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Text("Подтвердить")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun AuthDialog(
     onTokenReceived: (String) -> Unit,
     onDismiss: () -> Unit
@@ -268,6 +355,8 @@ fun AuthDialog(
     var token by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showConsent by remember { mutableStateOf(false) }
+    var consentHasName by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     AlertDialog(
@@ -333,7 +422,10 @@ fun AuthDialog(
                                 2 -> {
                                     val resp = Api.service.verifyCode(VerifyCodeBody(email.trim(), code.trim()))
                                     token = resp.token
-                                    if (resp.has_name) {
+                                    if (!resp.has_consent) {
+                                        consentHasName = resp.has_name
+                                        showConsent = true
+                                    } else if (resp.has_name) {
                                         onTokenReceived(resp.token)
                                     } else {
                                         step = 3
@@ -373,4 +465,19 @@ fun AuthDialog(
             TextButton(onClick = onDismiss) { Text("Отмена") }
         }
     )
+
+    if (showConsent) {
+        ConsentDialog(
+            token = token,
+            onConfirmed = {
+                showConsent = false
+                if (consentHasName) {
+                    onTokenReceived(token)
+                } else {
+                    step = 3
+                }
+            },
+            onDismiss = { showConsent = false }
+        )
+    }
 }

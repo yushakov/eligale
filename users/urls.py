@@ -8,4 +8,5 @@ urlpatterns = [
     path('api/auth/profile/', views.profile, name='auth_profile'),
     path('api/auth/logout/', views.logout, name='auth_logout'),
     path('api/auth/delete-account/', views.delete_account, name='auth_delete_account'),
+    path('api/auth/record-consent/', views.record_consent, name='auth_record_consent'),
 ]

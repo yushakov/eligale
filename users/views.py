@@ -78,7 +78,11 @@ def verify_code(request):
     user, _ = User.objects.get_or_create(email=email)
     token, _ = Token.objects.get_or_create(user=user)
 
-    return Response({'token': token.key, 'has_name': bool(user.display_name)})
+    return Response({
+        'token': token.key,
+        'has_name': bool(user.display_name),
+        'has_consent': bool(user.privacy_and_terms_of_use_consent_date),
+    })
 
 
 @api_view(['POST'])
@@ -122,6 +126,19 @@ def logout(request):
     except Exception:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
     token.delete()
+    return Response({'ok': True})
+
+
+@api_view(['POST'])
+def record_consent(request):
+    auth = TokenAuthentication()
+    try:
+        user, _ = auth.authenticate(request)
+    except Exception:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user.privacy_and_terms_of_use_consent_date = timezone.now()
+    user.save(update_fields=['privacy_and_terms_of_use_consent_date'])
     return Response({'ok': True})
 
 
