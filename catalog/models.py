@@ -49,17 +49,17 @@ class ProductImage(models.Model):
         return f'{self.product.name} — image {self.order}'
 
 
-class Favorite(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='favorites')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='favorites')
+class FavoriteImage(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='favorite_images')
+    image = models.ForeignKey(ProductImage, on_delete=models.CASCADE, related_name='favorited_by')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'product')
+        unique_together = ('user', 'image')
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.user.email} ♥ {self.product.name}'
+        return f'{self.user.email} ♥ image {self.image.id}'
 
 
 class Comment(models.Model):

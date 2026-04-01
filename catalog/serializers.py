@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import Category, Product, ProductImage, Comment, Favorite
+from .models import Category, Product, ProductImage, Comment, FavoriteImage
 from .thumbnails import thumbnail_key
 
 
@@ -97,21 +97,22 @@ class CommentSerializer(serializers.ModelSerializer):
         return obj.user.display_name or obj.user.email.split('@')[0]
 
 
-class FavoriteSerializer(serializers.ModelSerializer):
-    product_id = serializers.IntegerField(source='product.id', read_only=True)
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    cover_url = serializers.SerializerMethodField()
-    cover_url_100 = serializers.SerializerMethodField()
+class FavoriteImageSerializer(serializers.ModelSerializer):
+    image_id = serializers.IntegerField(source='image.id', read_only=True)
+    product_id = serializers.IntegerField(source='image.product.id', read_only=True)
+    product_name = serializers.CharField(source='image.product.name', read_only=True)
+    image_url = serializers.SerializerMethodField()
+    image_url_100 = serializers.SerializerMethodField()
 
     class Meta:
-        model = Favorite
-        fields = ['product_id', 'product_name', 'cover_url', 'cover_url_100', 'created_at']
+        model = FavoriteImage
+        fields = ['image_id', 'product_id', 'product_name', 'image_url', 'image_url_100', 'created_at']
 
-    def get_cover_url(self, obj):
-        return _public_url(obj.product.cover_key)
+    def get_image_url(self, obj):
+        return _public_url(obj.image.image_key)
 
-    def get_cover_url_100(self, obj):
-        return _public_url(thumbnail_key(obj.product.cover_key, 100)) if obj.product.cover_key else None
+    def get_image_url_100(self, obj):
+        return _public_url(thumbnail_key(obj.image.image_key, 100)) if obj.image.image_key else None
 
 
 class StaffCommentSerializer(serializers.ModelSerializer):

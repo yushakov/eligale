@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
-from .models import Category, Product, ProductImage, Comment, Favorite
+from .models import Category, Product, ProductImage, Comment, FavoriteImage
 
 User = get_user_model()
 
@@ -801,6 +801,7 @@ class FavoriteAPITest(TestCase):
         self.user = User.objects.create(email='user@test.com')
         self.token = Token.objects.create(user=self.user)
         self.product = Product.objects.create(name='Ваза')
+        self.image = ProductImage.objects.create(product=self.product, image_key='catalog/img.jpg')
         self.auth = {'HTTP_AUTHORIZATION': f'Token {self.token.key}'}
 
     def test_list_empty_initially(self):
@@ -815,41 +816,43 @@ class FavoriteAPITest(TestCase):
     def test_add_favorite_returns_201(self):
         r = self.client.post(
             '/api/favorites/',
-            json.dumps({'product_id': self.product.id}),
+            json.dumps({'image_id': self.image.id}),
             content_type='application/json',
             **self.auth,
         )
         self.assertEqual(r.status_code, 201)
 
-    def test_list_contains_added_product(self):
-        Favorite.objects.create(user=self.user, product=self.product)
+    def test_list_contains_added_image(self):
+        FavoriteImage.objects.create(user=self.user, image=self.image)
         r = self.client.get('/api/favorites/', **self.auth)
         self.assertEqual(len(r.json()), 1)
+        self.assertEqual(r.json()[0]['image_id'], self.image.id)
         self.assertEqual(r.json()[0]['product_id'], self.product.id)
         self.assertEqual(r.json()[0]['product_name'], self.product.name)
 
     def test_add_duplicate_is_idempotent(self):
-        Favorite.objects.create(user=self.user, product=self.product)
+        FavoriteImage.objects.create(user=self.user, image=self.image)
         r = self.client.post(
             '/api/favorites/',
-            json.dumps({'product_id': self.product.id}),
+            json.dumps({'image_id': self.image.id}),
             content_type='application/json',
             **self.auth,
         )
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(Favorite.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(FavoriteImage.objects.filter(user=self.user).count(), 1)
 
-    def test_add_hidden_product_returns_404(self):
-        hidden = Product.objects.create(name='Скрытый', is_hidden=True)
+    def test_add_image_of_hidden_product_returns_404(self):
+        hidden_product = Product.objects.create(name='Скрытый', is_hidden=True)
+        hidden_image = ProductImage.objects.create(product=hidden_product, image_key='catalog/h.jpg')
         r = self.client.post(
             '/api/favorites/',
-            json.dumps({'product_id': hidden.id}),
+            json.dumps({'image_id': hidden_image.id}),
             content_type='application/json',
             **self.auth,
         )
         self.assertEqual(r.status_code, 404)
 
-    def test_add_missing_product_id_returns_400(self):
+    def test_add_missing_image_id_returns_400(self):
         r = self.client.post(
             '/api/favorites/',
             json.dumps({}),
@@ -859,26 +862,24 @@ class FavoriteAPITest(TestCase):
         self.assertEqual(r.status_code, 400)
 
     def test_delete_favorite(self):
-        Favorite.objects.create(user=self.user, product=self.product)
-        r = self.client.delete(f'/api/favorites/{self.product.id}/', **self.auth)
+        FavoriteImage.objects.create(user=self.user, image=self.image)
+        r = self.client.delete(f'/api/favorites/{self.image.id}/', **self.auth)
         self.assertEqual(r.status_code, 204)
-        self.assertFalse(Favorite.objects.filter(user=self.user, product=self.product).exists())
+        self.assertFalse(FavoriteImage.objects.filter(user=self.user, image=self.image).exists())
 
     def test_delete_nonexistent_returns_204(self):
-        r = self.client.delete(f'/api/favorites/{self.product.id}/', **self.auth)
+        r = self.client.delete(f'/api/favorites/{self.image.id}/', **self.auth)
         self.assertEqual(r.status_code, 204)
 
     def test_isolated_by_user(self):
         other = User.objects.create(email='other@test.com')
-        Favorite.objects.create(user=other, product=self.product)
+        FavoriteImage.objects.create(user=other, image=self.image)
         r = self.client.get('/api/favorites/', **self.auth)
         self.assertEqual(r.json(), [])
 
     def test_response_has_expected_fields(self):
-        self.product.cover_key = 'catalog/img.jpg'
-        self.product.save()
-        Favorite.objects.create(user=self.user, product=self.product)
+        FavoriteImage.objects.create(user=self.user, image=self.image)
         r = self.client.get('/api/favorites/', **self.auth)
         item = r.json()[0]
-        for field in ['product_id', 'product_name', 'cover_url', 'cover_url_100', 'created_at']:
+        for field in ['image_id', 'product_id', 'product_name', 'image_url', 'image_url_100', 'created_at']:
             self.assertIn(field, item)

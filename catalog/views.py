@@ -21,8 +21,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import authentication_classes, permission_classes
 
-from .models import Category, Product, ProductImage, Comment, Favorite
-from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer, FavoriteSerializer
+from .models import Category, Product, ProductImage, Comment, FavoriteImage
+from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer, FavoriteImageSerializer
 
 
 def _make_snippet(text: str, query: str, context: int = 80) -> str:
@@ -493,20 +493,20 @@ def mobile_product_toggle_hidden(request, pk):
 @permission_classes([IsAuthenticated])
 def favorites(request):
     if request.method == 'GET':
-        favs = Favorite.objects.filter(user=request.user).select_related('product')
-        return Response(FavoriteSerializer(favs, many=True).data)
+        favs = FavoriteImage.objects.filter(user=request.user).select_related('image', 'image__product')
+        return Response(FavoriteImageSerializer(favs, many=True).data)
 
-    product_id = request.data.get('product_id')
-    if not product_id:
-        return Response({'error': 'product_id required'}, status=status.HTTP_400_BAD_REQUEST)
-    product = get_object_or_404(Product, pk=product_id, is_hidden=False)
-    _, created = Favorite.objects.get_or_create(user=request.user, product=product)
+    image_id = request.data.get('image_id')
+    if not image_id:
+        return Response({'error': 'image_id required'}, status=status.HTTP_400_BAD_REQUEST)
+    image = get_object_or_404(ProductImage, pk=image_id, product__is_hidden=False)
+    _, created = FavoriteImage.objects.get_or_create(user=request.user, image=image)
     return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 @api_view(['DELETE'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def favorite_delete(request, product_id):
-    Favorite.objects.filter(user=request.user, product_id=product_id).delete()
+def favorite_delete(request, image_id):
+    FavoriteImage.objects.filter(user=request.user, image_id=image_id).delete()
     return Response(status=status.HTTP_204_NO_CONTENT)

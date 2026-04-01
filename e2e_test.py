@@ -239,58 +239,65 @@ def test_favorites(base, token, prod_id):
     section("Favorites API")
     auth = {"Authorization": f"Token {token}"}
 
-    # Список изначально не содержит тестовый товар
+    # Получаем image_id из первой картинки товара
+    r = get(base, f"/api/products/{prod_id}/")
+    if not (r and r.status_code == 200 and r.json().get("images")):
+        ok(f"  Пропускаем: у товара {prod_id} нет картинок")
+        return
+    image_id = r.json()["images"][0]["id"]
+
+    # Список изначально не содержит тестовую картинку
     r = get(base, "/api/favorites/", headers=auth)
     if not check(r and r.status_code == 200, "GET /api/favorites/ → 200",
                  "Favorites list failed", f"status={status(r)}"):
         return
-    initial_ids = [f["product_id"] for f in r.json()]
+    initial_ids = [f["image_id"] for f in r.json()]
     # Если уже в избранном — удалим, чтобы тест был воспроизводимым
-    if prod_id in initial_ids:
-        delete(base, f"/api/favorites/{prod_id}/", headers=auth)
+    if image_id in initial_ids:
+        delete(base, f"/api/favorites/{image_id}/", headers=auth)
 
     # Добавить в избранное
-    r = post(base, "/api/favorites/", json={"product_id": prod_id}, headers=auth)
+    r = post(base, "/api/favorites/", json={"image_id": image_id}, headers=auth)
     check(r and r.status_code == 201,
-          f"POST /api/favorites/ → 201 (добавлен product_id={prod_id})",
+          f"POST /api/favorites/ → 201 (добавлен image_id={image_id})",
           "Add favorite failed", f"status={status(r)} body={r.text if r else ''}")
 
     # Повторное добавление — идемпотентно, 200
-    r = post(base, "/api/favorites/", json={"product_id": prod_id}, headers=auth)
+    r = post(base, "/api/favorites/", json={"image_id": image_id}, headers=auth)
     check(r and r.status_code == 200,
           "POST /api/favorites/ повторно → 200 (идемпотентно)",
           "Duplicate add should return 200", f"status={status(r)}")
 
-    # Товар виден в списке, поля присутствуют
+    # Картинка видна в списке, поля присутствуют
     r = get(base, "/api/favorites/", headers=auth)
     if check(r and r.status_code == 200, "GET /api/favorites/ после добавления → 200",
              "Favorites list failed", f"status={status(r)}"):
         items = r.json()
-        found = next((f for f in items if f["product_id"] == prod_id), None)
-        if check(found is not None, f"Товар {prod_id} есть в избранном",
-                 f"Товар {prod_id} НЕ найден в избранном"):
-            for field in ["product_id", "product_name", "cover_url", "cover_url_100", "created_at"]:
+        found = next((f for f in items if f["image_id"] == image_id), None)
+        if check(found is not None, f"Картинка {image_id} есть в избранном",
+                 f"Картинка {image_id} НЕ найдена в избранном"):
+            for field in ["image_id", "product_id", "product_name", "image_url", "image_url_100", "created_at"]:
                 check(field in found,
                       f"  поле '{field}' присутствует",
                       f"  поле '{field}' отсутствует", f"keys={list(found.keys())}")
 
     # Удалить из избранного
-    r = delete(base, f"/api/favorites/{prod_id}/", headers=auth)
+    r = delete(base, f"/api/favorites/{image_id}/", headers=auth)
     check(r and r.status_code == 204,
-          f"DELETE /api/favorites/{prod_id}/ → 204",
+          f"DELETE /api/favorites/{image_id}/ → 204",
           "Delete favorite failed", f"status={status(r)}")
 
-    # После удаления товара нет в списке
+    # После удаления картинки нет в списке
     r = get(base, "/api/favorites/", headers=auth)
     if check(r and r.status_code == 200, "GET /api/favorites/ после удаления → 200",
              "Favorites list failed", f"status={status(r)}"):
-        ids_after = [f["product_id"] for f in r.json()]
-        check(prod_id not in ids_after,
-              f"Товар {prod_id} удалён из избранного",
-              f"Товар {prod_id} всё ещё в избранном после DELETE")
+        ids_after = [f["image_id"] for f in r.json()]
+        check(image_id not in ids_after,
+              f"Картинка {image_id} удалена из избранного",
+              f"Картинка {image_id} всё ещё в избранном после DELETE")
 
     # Повторное удаление — 204 (idempotent)
-    r = delete(base, f"/api/favorites/{prod_id}/", headers=auth)
+    r = delete(base, f"/api/favorites/{image_id}/", headers=auth)
     check(r and r.status_code == 204,
           "DELETE повторно → 204 (идемпотентно)",
           "Repeated delete should return 204", f"status={status(r)}")
