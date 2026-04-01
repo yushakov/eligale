@@ -8,3 +8,9 @@ def privacy(request):
 
 def privacy_ru(request):
     return render(request, 'privacy_ru.html')
+
+def termsofuse(request):
+    return render(request, 'termsofuse.html')
+
+def termsofuse_ru(request):
+    return render(request, 'termsofuse_ru.html')
