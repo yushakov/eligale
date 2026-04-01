@@ -11,5 +11,5 @@ object DataCache {
     val products: MutableMap<Int, List<Product>> = mutableMapOf()
     val productDetail: MutableMap<Int, ProductDetail> = mutableMapOf()
     val comments: MutableMap<Int, List<Comment>> = mutableMapOf()
-    val favoriteProductIds: MutableSet<Int> = mutableSetOf()
+    val favoriteImageIds: MutableSet<Int> = mutableSetOf()
 }

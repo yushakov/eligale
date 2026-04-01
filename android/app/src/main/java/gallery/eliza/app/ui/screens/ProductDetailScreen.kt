@@ -82,26 +82,26 @@ fun ProductDetailScreen(
     var staffChatDialogPage by remember { mutableStateOf<Int?>(null) }
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var isFavorited by remember { mutableStateOf(token != null && productId in DataCache.favoriteProductIds) }
+    var favoriteImageIds by remember { mutableStateOf(DataCache.favoriteImageIds.toSet()) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    val onFavoriteToggle: () -> Unit = {
+    val onImageFavoriteToggle: (imageId: Int) -> Unit = { imageId ->
         if (token == null) {
             showAuth = true
-        } else if (isFavorited) {
-            isFavorited = false
-            DataCache.favoriteProductIds.remove(productId)
+        } else if (imageId in favoriteImageIds) {
+            favoriteImageIds = favoriteImageIds - imageId
+            DataCache.favoriteImageIds.remove(imageId)
             scope.launch {
-                try { Api.service.deleteFavorite("Token $token", productId) }
-                catch (_: Exception) { isFavorited = true; DataCache.favoriteProductIds.add(productId) }
+                try { Api.service.deleteFavorite("Token $token", imageId) }
+                catch (_: Exception) { favoriteImageIds = favoriteImageIds + imageId; DataCache.favoriteImageIds.add(imageId) }
             }
         } else {
-            isFavorited = true
-            DataCache.favoriteProductIds.add(productId)
+            favoriteImageIds = favoriteImageIds + imageId
+            DataCache.favoriteImageIds.add(imageId)
             scope.launch {
-                try { Api.service.addFavorite("Token $token", mapOf("product_id" to productId)) }
-                catch (_: Exception) { isFavorited = false; DataCache.favoriteProductIds.remove(productId) }
+                try { Api.service.addFavorite("Token $token", mapOf("image_id" to imageId)) }
+                catch (_: Exception) { favoriteImageIds = favoriteImageIds - imageId; DataCache.favoriteImageIds.remove(imageId) }
             }
         }
     }
@@ -283,22 +283,9 @@ fun ProductDetailScreen(
                                     ProductGallery(
                                         images = images,
                                         onPhotoTap = { page -> fullscreenState = images to page },
+                                        favoriteImageIds = favoriteImageIds,
+                                        onFavoriteToggle = onImageFavoriteToggle,
                                     )
-                                }
-                            }
-
-                            // Иконка «Избранное» под галереей
-                            item {
-                                Row(
-                                    modifier = Modifier.padding(start = 8.dp, top = 4.dp),
-                                ) {
-                                    IconButton(onClick = onFavoriteToggle) {
-                                        Icon(
-                                            imageVector = if (isFavorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                            contentDescription = if (isFavorited) "Убрать из избранного" else "В избранное",
-                                            tint = if (isFavorited) Color(0xFFE53935) else BrownDark,
-                                        )
-                                    }
                                 }
                             }
 
@@ -460,8 +447,8 @@ fun ProductDetailScreen(
                         token != null -> { p -> chatDialogPage = p }
                         else -> { _ -> showAuth = true }
                     },
-                    isFavorited = isFavorited,
-                    onFavoriteClick = onFavoriteToggle,
+                    favoriteImageIds = favoriteImageIds,
+                    onFavoriteToggle = onImageFavoriteToggle,
                 )
             }
         }
@@ -476,6 +463,8 @@ fun ProductDetailScreen(
 fun ProductGallery(
     images: List<gallery.eliza.app.data.ProductImage>,
     onPhotoTap: (index: Int) -> Unit,
+    favoriteImageIds: Set<Int> = emptySet(),
+    onFavoriteToggle: (imageId: Int) -> Unit = {},
 ) {
     val columns = 3
     Column(
@@ -491,17 +480,41 @@ fun ProductGallery(
                 for (col in 0 until columns) {
                     val index = row * columns + col
                     if (index < images.size) {
-                        AsyncImage(
-                            model = images[index].image_url_300 ?: images[index].image_url,
-                            contentDescription = "Фото ${index + 1}",
-                            contentScale = ContentScale.Crop,
-                            placeholder = ColorPainter(Color(0xFFE0E0E0)),
-                            error = ColorPainter(Color(0xFFE0E0E0)),
+                        val image = images[index]
+                        val isFav = image.id in favoriteImageIds
+                        Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
                                 .clickable { onPhotoTap(index) },
-                        )
+                        ) {
+                            AsyncImage(
+                                model = image.image_url_300 ?: image.image_url,
+                                contentDescription = "Фото ${index + 1}",
+                                contentScale = ContentScale.Crop,
+                                placeholder = ColorPainter(Color(0xFFE0E0E0)),
+                                error = ColorPainter(Color(0xFFE0E0E0)),
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .size(32.dp)
+                                    .background(
+                                        Color.Black.copy(alpha = 0.28f),
+                                        androidx.compose.foundation.shape.RoundedCornerShape(topEnd = 8.dp)
+                                    )
+                                    .clickable { onFavoriteToggle(image.id) },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = if (isFav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = if (isFav) Color(0xFFE53935) else Color.White,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
                     } else {
                         Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
                     }
@@ -518,8 +531,8 @@ fun FullscreenImageViewer(
     initialPage: Int = 0,
     onDismiss: () -> Unit,
     onChatButtonClick: ((page: Int) -> Unit)? = null,
-    isFavorited: Boolean = false,
-    onFavoriteClick: (() -> Unit)? = null,
+    favoriteImageIds: Set<Int> = emptySet(),
+    onFavoriteToggle: ((imageId: Int) -> Unit)? = null,
 ) {
     // Cyclic pager: virtual page count is huge, real index = virtualPage % images.size.
     // Start offset keeps the user near the center so they can swipe both ways indefinitely.
@@ -607,12 +620,13 @@ fun FullscreenImageViewer(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (onFavoriteClick != null) {
-                IconButton(onClick = onFavoriteClick) {
+            if (onFavoriteToggle != null) {
+                val isFav = images[currentRealPage].id in favoriteImageIds
+                IconButton(onClick = { onFavoriteToggle(images[currentRealPage].id) }) {
                     Icon(
-                        imageVector = if (isFavorited) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = if (isFavorited) "Убрать из избранного" else "В избранное",
-                        tint = if (isFavorited) Color(0xFFE53935) else Color.White,
+                        imageVector = if (isFav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (isFav) "Убрать из избранного" else "В избранное",
+                        tint = if (isFav) Color(0xFFE53935) else Color.White,
                         modifier = Modifier.size(28.dp),
                     )
                 }

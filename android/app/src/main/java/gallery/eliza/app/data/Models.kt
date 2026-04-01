@@ -111,9 +111,10 @@ data class SetNameResponse(val display_name: String)
 data class PresignResponse(val upload_url: String, val public_url: String)
 
 data class FavoriteItem(
+    val image_id: Int,
     val product_id: Int,
     val product_name: String,
-    val cover_url: String?,
-    val cover_url_100: String?,
+    val image_url: String?,
+    val image_url_100: String?,
     val created_at: String,
 )

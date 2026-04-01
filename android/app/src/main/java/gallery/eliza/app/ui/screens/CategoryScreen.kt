@@ -100,11 +100,11 @@ fun CategoryScreen(
 
     // Загружаем список избранного один раз при смене токена
     LaunchedEffect(token) {
-        if (token == null) { DataCache.favoriteProductIds.clear(); return@LaunchedEffect }
+        if (token == null) { DataCache.favoriteImageIds.clear(); return@LaunchedEffect }
         try {
             val favs = Api.service.getFavorites("Token $token")
-            DataCache.favoriteProductIds.clear()
-            DataCache.favoriteProductIds.addAll(favs.map { it.product_id })
+            DataCache.favoriteImageIds.clear()
+            DataCache.favoriteImageIds.addAll(favs.map { it.image_id })
         } catch (_: Exception) { }
     }
 

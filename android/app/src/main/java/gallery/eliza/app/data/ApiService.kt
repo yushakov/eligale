@@ -87,10 +87,10 @@ interface ApiService {
         @Body body: Map<String, Int>,
     )
 
-    @DELETE("api/favorites/{productId}/")
+    @DELETE("api/favorites/{imageId}/")
     suspend fun deleteFavorite(
         @Header("Authorization") token: String,
-        @Path("productId") productId: Int,
+        @Path("imageId") imageId: Int,
     )
 
     // ── Медиа в чате ──────────────────────────────────────────────────────────

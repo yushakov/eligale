@@ -1,5 +1,8 @@
 package gallery.eliza.app.ui.screens
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +24,7 @@ import coil.compose.AsyncImage
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.DataCache
 import gallery.eliza.app.data.FavoriteItem
+import gallery.eliza.app.data.ProductImage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +39,7 @@ fun FavoritesScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var pendingDeleteId by remember { mutableStateOf<Int?>(null) }
+    var fullscreenItem by remember { mutableStateOf<FavoriteItem?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -49,19 +54,19 @@ fun FavoritesScreen(
     }
 
     // Диалог подтверждения удаления
-    pendingDeleteId?.let { productId ->
+    pendingDeleteId?.let { imageId ->
         AlertDialog(
             onDismissRequest = { pendingDeleteId = null },
             text = { Text("Удалить из избранного?") },
             confirmButton = {
                 TextButton(onClick = {
-                    val idToDelete = productId
+                    val idToDelete = imageId
                     pendingDeleteId = null
                     scope.launch {
                         try {
                             Api.service.deleteFavorite("Token $token", idToDelete)
-                            favorites = favorites.filter { it.product_id != idToDelete }
-                            DataCache.favoriteProductIds.remove(idToDelete)
+                            favorites = favorites.filter { it.image_id != idToDelete }
+                            DataCache.favoriteImageIds.remove(idToDelete)
                         } catch (_: Exception) { }
                     }
                 }) { Text("Удалить") }
@@ -72,103 +77,145 @@ fun FavoritesScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Избранное") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onHome) {
-                        Icon(Icons.Filled.Home, contentDescription = "На главную")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            when {
-                loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                error != null -> Text(
-                    error!!,
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.error
-                )
-                favorites.isEmpty() -> Text(
-                    "Избранное пусто",
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(favorites, key = { it.product_id }) { item ->
-                        // confirmValueChange возвращает false → свайп сбрасывается автоматически,
-                        // мы только показываем диалог подтверждения
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { value ->
-                                if (value == SwipeToDismissBoxValue.EndToStart) {
-                                    pendingDeleteId = item.product_id
-                                }
-                                false
-                            }
-                        )
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = false,
-                            backgroundContent = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(MaterialTheme.colorScheme.errorContainer)
-                                        .padding(end = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd,
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Delete,
-                                        contentDescription = "Удалить",
-                                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                                    )
-                                }
-                            },
-                        ) {
-                            FavoriteRow(
-                                item = item,
-                                onClick = { onOpenProduct(item.product_id) },
-                            )
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Избранное") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                         }
-                        HorizontalDivider()
+                    },
+                    actions = {
+                        IconButton(onClick = onHome) {
+                            Icon(Icons.Filled.Home, contentDescription = "На главную")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                when {
+                    loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    error != null -> Text(
+                        error!!,
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    favorites.isEmpty() -> Text(
+                        "Избранное пусто",
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(favorites, key = { it.image_id }) { item ->
+                            // confirmValueChange возвращает false → свайп сбрасывается автоматически,
+                            // мы только показываем диалог подтверждения
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                                        pendingDeleteId = item.image_id
+                                    }
+                                    false
+                                }
+                            )
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(MaterialTheme.colorScheme.errorContainer)
+                                            .padding(end = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd,
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Delete,
+                                            contentDescription = "Удалить",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        )
+                                    }
+                                },
+                            ) {
+                                FavoriteRow(
+                                    item = item,
+                                    onImageClick = { fullscreenItem = item },
+                                    onProductClick = { onOpenProduct(item.product_id) },
+                                )
+                            }
+                            HorizontalDivider()
+                        }
                     }
                 }
+            }
+        }
+
+        // Полноэкранный просмотр картинки
+        AnimatedVisibility(
+            visible = fullscreenItem != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            fullscreenItem?.let { item ->
+                val image = ProductImage(
+                    id = item.image_id,
+                    image_url = item.image_url,
+                    image_url_100 = item.image_url_100,
+                    image_url_200 = null,
+                    image_url_300 = null,
+                    order = 0,
+                )
+                val favoriteImageIds = remember(favorites) { favorites.map { it.image_id }.toSet() }
+                FullscreenImageViewer(
+                    images = listOf(image),
+                    onDismiss = { fullscreenItem = null },
+                    favoriteImageIds = favoriteImageIds,
+                    onFavoriteToggle = { imageId ->
+                        scope.launch {
+                            try {
+                                Api.service.deleteFavorite("Token $token", imageId)
+                                favorites = favorites.filter { it.image_id != imageId }
+                                DataCache.favoriteImageIds.remove(imageId)
+                                fullscreenItem = null
+                            } catch (_: Exception) { }
+                        }
+                    },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun FavoriteRow(item: FavoriteItem, onClick: () -> Unit) {
+private fun FavoriteRow(item: FavoriteItem, onImageClick: () -> Unit, onProductClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         AsyncImage(
-            model = item.cover_url_100 ?: item.cover_url,
+            model = item.image_url_100 ?: item.image_url,
             contentDescription = item.product_name,
             contentScale = ContentScale.Crop,
             placeholder = ColorPainter(Color(0xFFE0E0E0)),
             error = ColorPainter(Color(0xFFE0E0E0)),
-            modifier = Modifier.size(72.dp)
+            modifier = Modifier
+                .padding(start = 16.dp)
+                .size(72.dp)
+                .clickable(onClick = onImageClick)
         )
         Text(
             text = item.product_name,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .clickable(onClick = onProductClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         )
     }
 }
