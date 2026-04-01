@@ -324,14 +324,14 @@ fun ProductDetailScreen(
                         chatDialogPage?.let { page ->
                             AlertDialog(
                                 onDismissRequest = { chatDialogPage = null },
-                                text = { Text("Вас интересует данный продукт?") },
+                                text = { Text("Вас интересует данное наименование?") },
                                 confirmButton = {
                                     TextButton(onClick = {
                                         chatDialogPage = null
                                         val productName = product!!.name
                                         scope.launch {
                                             try {
-                                                val text = "Интересует товар «$productName» (фото ${page + 1})\n[product:$productId:$page]"
+                                                val text = "Интересует «$productName» (фото ${page + 1})\n[product:$productId:$page]"
                                                 Api.service.sendChatMessage("Token ${token!!}", mapOf("text" to text))
                                             } catch (_: Exception) { }
                                             onGoToChat?.invoke()
@@ -351,7 +351,7 @@ fun ProductDetailScreen(
                         staffChatDialogPage?.let { page ->
                             AlertDialog(
                                 onDismissRequest = { staffChatDialogPage = null },
-                                text = { Text("В чат с этим товаром?") },
+                                text = { Text("В чат с этим наименованием?") },
                                 confirmButton = {
                                     TextButton(onClick = {
                                         staffChatDialogPage = null
@@ -386,7 +386,7 @@ fun ProductDetailScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                            // Название товара
+                            // Название наименования
                             item {
                                 Text(
                                     text = product!!.name,
@@ -564,7 +564,7 @@ fun ProductDetailScreen(
 }
 
 /**
- * Галерея изображений товара в виде сетки 3×N.
+ * Галерея изображений в виде сетки 3×N.
  * Тап по фотографии открывает полноэкранный просмотр.
  */
 @Composable

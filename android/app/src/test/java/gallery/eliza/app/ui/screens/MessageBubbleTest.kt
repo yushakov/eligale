@@ -63,7 +63,7 @@ class MessageBubbleTest {
                 )
             }
         }
-        rule.onNodeWithText("→ Открыть товар").assertIsDisplayed()
+        rule.onNodeWithText("→ Открыть наименование").assertIsDisplayed()
     }
 
     @Test
@@ -77,7 +77,7 @@ class MessageBubbleTest {
                 )
             }
         }
-        rule.onNodeWithText("→ Открыть товар").assertDoesNotExist()
+        rule.onNodeWithText("→ Открыть наименование").assertDoesNotExist()
     }
 
     @Test
@@ -96,7 +96,7 @@ class MessageBubbleTest {
                 )
             }
         }
-        rule.onNodeWithText("→ Открыть товар").performClick()
+        rule.onNodeWithText("→ Открыть наименование").performClick()
         assertEquals(42, capturedId)
         assertEquals(3, capturedPage)
     }
@@ -120,14 +120,14 @@ class MessageBubbleTest {
         rule.setContent {
             ElizaGalleryTheme {
                 MessageBubble(
-                    msg = msg("Интересует товар «Кольцо» [product:7:0]"),
+                    msg = msg("Интересует «Кольцо» [product:7:0]"),
                     isOwnMessage = false,
                     onOpenProduct = { _, _ -> },
                 )
             }
         }
-        rule.onNodeWithText("→ Открыть товар").assertIsDisplayed()
-        rule.onNodeWithText("Интересует товар «Кольцо»").assertIsDisplayed()
+        rule.onNodeWithText("→ Открыть наименование").assertIsDisplayed()
+        rule.onNodeWithText("Интересует «Кольцо»").assertIsDisplayed()
     }
 
     // ── Image-ссылка [image:url] ──────────────────────────────────────────────

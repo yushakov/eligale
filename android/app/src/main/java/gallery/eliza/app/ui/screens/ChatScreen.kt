@@ -460,7 +460,7 @@ internal fun MessageBubble(
                         val imageIndex = productMatch.groupValues[2].toInt()
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "→ Открыть товар",
+                            text = "→ Открыть наименование",
                             color = BrownDark,
                             fontSize = 13.sp,
                             modifier = Modifier

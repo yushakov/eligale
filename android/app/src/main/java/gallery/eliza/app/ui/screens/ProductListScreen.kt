@@ -89,7 +89,7 @@ fun ProductListScreen(
                         Text("Переподключиться")
                     }
                 }
-                products.isEmpty() -> Text("Нет товаров", Modifier.align(Alignment.Center))
+                products.isEmpty() -> Text("Ничего нет", Modifier.align(Alignment.Center))
                 else -> PullToRefreshBox(
                     isRefreshing = isRefreshing,
                     onRefresh = {
