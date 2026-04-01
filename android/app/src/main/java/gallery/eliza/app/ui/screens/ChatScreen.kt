@@ -237,7 +237,7 @@ fun ChatScreen(
                     start = 12.dp,
                     end = 12.dp,
                     top = 8.dp,
-                    bottom = 80.dp,
+                    bottom = 80.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
                 ),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
