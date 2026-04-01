@@ -3,6 +3,38 @@ from django.conf import settings
 from django.utils.safestring import mark_safe
 
 
+class ApkUploadWidget(forms.TextInput):
+
+    class Media:
+        js = ('catalog/apk_upload.js',)
+
+    def render(self, name, value, attrs=None, renderer=None):
+        key = value or ''
+        public_url = ''
+        if key:
+            base = settings.YA_PUBLIC_UPLOADER_PUBLIC_BASE_URL.rstrip('/')
+            public_url = f'{base}/{key}'
+
+        field_id = attrs.get('id', f'id_{name}') if attrs else f'id_{name}'
+        status_id = f'{field_id}_status'
+        status_text = f'Текущий файл: {public_url}' if public_url else ''
+
+        return mark_safe(f'''
+<div style="display:flex;flex-direction:column;gap:4px;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <input type="text" name="{name}" value="{key}" id="{field_id}"
+           style="flex:1;font-family:monospace;font-size:12px;" readonly>
+    <label style="cursor:pointer;padding:4px 10px;background:#417690;color:white;border-radius:4px;font-size:13px;">
+      Загрузить APK
+      <input type="file" accept=".apk,application/vnd.android.package-archive" style="display:none;"
+             onchange="apkUpload(this, \'{field_id}\', \'{status_id}\')">
+    </label>
+  </div>
+  <span id="{status_id}" style="font-size:12px;color:#666;">{status_text}</span>
+</div>
+''')
+
+
 class ImageUploadWidget(forms.TextInput):
 
     class Media:

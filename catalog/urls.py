@@ -22,6 +22,8 @@ urlpatterns = [
     path('api/staff/reports/<int:report_id>/delete-comment/', views.staff_report_delete_comment, name='staff_report_delete_comment'),
     path('api/favorites/', views.favorites, name='favorites'),
     path('api/favorites/<int:image_id>/', views.favorite_delete, name='favorite_delete'),
+    path('api/app/latest-version/', views.latest_app_version, name='latest_app_version'),
+    path('app/download/', views.app_download, name='app_download'),
 
     # Mobile
     path('mobile/', views.mobile_home, name='mobile_home'),

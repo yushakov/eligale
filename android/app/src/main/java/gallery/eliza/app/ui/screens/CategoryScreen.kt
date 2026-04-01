@@ -17,7 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -62,6 +64,7 @@ fun CategoryScreen(
     var unreadCount by remember { mutableStateOf(0) }
     var unreadCommentCount by remember { mutableStateOf(0) }
     var unreadReportCount by remember { mutableStateOf(0) }
+    var updateInfo by remember { mutableStateOf<gallery.eliza.app.data.AppVersionInfo?>(null) }
     val scope = rememberCoroutineScope()
 
     // Если кэш есть — сразу скрываем сплэш, не ждём сети
@@ -107,6 +110,14 @@ fun CategoryScreen(
             val favs = Api.service.getFavorites("Token $token")
             DataCache.favoriteImageIds.clear()
             DataCache.favoriteImageIds.addAll(favs.map { it.image_id })
+        } catch (_: Exception) { }
+    }
+
+    // Проверка обновления приложения — один раз при запуске
+    LaunchedEffect(Unit) {
+        try {
+            val info = Api.service.getLatestAppVersion()
+            if (info.version_code > BuildConfig.VERSION_CODE) updateInfo = info
         } catch (_: Exception) { }
     }
 
@@ -226,17 +237,29 @@ fun CategoryScreen(
                                 )
                             }
                             HorizontalDivider()
-                            Box(
+                            val uriHandler = LocalUriHandler.current
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.CenterEnd,
+                                horizontalAlignment = Alignment.End,
                             ) {
                                 Text(
                                     text = "v${BuildConfig.VERSION_NAME}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                updateInfo?.let { info ->
+                                    Text(
+                                        text = "обновить до v${info.version_name}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = BrownDark,
+                                        textDecoration = TextDecoration.Underline,
+                                        modifier = Modifier.clickable {
+                                            uriHandler.openUri(info.download_page_url)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

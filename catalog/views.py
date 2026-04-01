@@ -21,7 +21,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import authentication_classes, permission_classes
 
-from .models import Category, Product, ProductImage, Comment, FavoriteImage, CommentReport
+from .models import AppRelease, Category, Product, ProductImage, Comment, FavoriteImage, CommentReport
 from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer, FavoriteImageSerializer
 
 
@@ -169,7 +169,11 @@ def presign_upload(request):
     if not content_type:
         content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
 
-    object_key = _build_object_key(filename)
+    allowed_prefixes = {'catalog', 'chat', 'apk'}
+    prefix = request.POST.get('prefix', 'catalog')
+    if prefix not in allowed_prefixes:
+        prefix = 'catalog'
+    object_key = _build_object_key(filename, prefix=prefix)
     s3 = _get_s3_client()
 
     upload_url = s3.generate_presigned_url(
@@ -595,3 +599,26 @@ def favorites(request):
 def favorite_delete(request, image_id):
     FavoriteImage.objects.filter(user=request.user, image_id=image_id).delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def latest_app_version(request):
+    release = AppRelease.objects.order_by('-version_code').first()
+    if not release:
+        return JsonResponse({'error': 'No releases'}, status=404)
+    return JsonResponse({
+        'version_code': release.version_code,
+        'version_name': release.version_name,
+        'download_page_url': 'https://eliza.gallery/app/download/',
+    })
+
+
+def app_download(request):
+    release = AppRelease.objects.order_by('-version_code').first()
+    apk_url = ''
+    if release and release.apk_key:
+        base = settings.YA_PUBLIC_UPLOADER_PUBLIC_BASE_URL.rstrip('/')
+        apk_url = f'{base}/{release.apk_key}'
+    return render(request, 'app_download.html', {
+        'release': release,
+        'apk_url': apk_url,
+    })

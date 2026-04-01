@@ -16,6 +16,9 @@ interface ApiService {
         @Query("q") query: String,
     ): List<SearchResult>
 
+    @GET("api/app/latest-version/")
+    suspend fun getLatestAppVersion(): AppVersionInfo
+
     @GET("api/categories/")
     suspend fun getCategories(): List<Category>
 

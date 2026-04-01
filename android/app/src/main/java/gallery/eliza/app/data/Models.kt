@@ -1,5 +1,11 @@
 package gallery.eliza.app.data
 
+data class AppVersionInfo(
+    val version_code: Int,
+    val version_name: String,
+    val download_page_url: String,
+)
+
 data class Category(
     val id: Int,
     val name: String,
