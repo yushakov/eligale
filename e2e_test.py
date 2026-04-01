@@ -240,13 +240,26 @@ def test_reports_user(base, token, prod_id):
     section("Reports API (пользователь)")
     auth = {"Authorization": f"Token {token}"}
 
-    # Создаём комментарий от другого пользователя через public API — берём первый существующий
+    # Staff не может репортить — пропускаем если токен staff-аккаунта
+    r = get(base, "/api/auth/profile/", headers=auth)
+    if r and r.status_code == 200 and r.json().get("is_staff"):
+        skip("Пропущено: токен принадлежит staff-аккаунту (staff не может репортить)")
+        return
+
+    # Берём комментарий чужого пользователя (не наш) — на свой жаловаться нельзя (403)
+    my_email = r.json().get("email") if r and r.status_code == 200 else None
     r = get(base, f"/api/products/{prod_id}/comments/")
     if not (r and r.status_code == 200 and r.json()):
         skip("Нет комментариев для теста жалоб")
         return
 
-    comment_id = r.json()[0]["id"]
+    comments = r.json()
+    foreign = next((c for c in comments if c.get("user_email") != my_email), None)
+    if not foreign:
+        skip("Нет чужих комментариев для теста жалоб")
+        return
+
+    comment_id = foreign["id"]
 
     r = post(base, f"/api/comments/{comment_id}/report/",
              json={"text": "e2e test report"}, headers=auth)
