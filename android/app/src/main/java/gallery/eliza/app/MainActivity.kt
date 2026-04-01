@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import gallery.eliza.app.data.Api
+import gallery.eliza.app.data.ChatDatabase
 import gallery.eliza.app.data.DiskCache
 import gallery.eliza.app.data.TokenStorage
 import gallery.eliza.app.ui.screens.CategoryScreen
@@ -54,8 +55,9 @@ class MainActivity : ComponentActivity() {
                 val onTokenChange: (String?) -> Unit = { newToken ->
                     if (newToken != null) {
                         TokenStorage.save(context, newToken)
-                        // Проверяем is_staff после входа
                         scope.launch {
+                            // Чистим чат предыдущего пользователя перед загрузкой нового профиля
+                            ChatDatabase.get(context).messageDao().deleteAll()
                             try {
                                 val profile = Api.service.getProfile("Token $newToken")
                                 isStaff = profile.is_staff
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
                         TokenStorage.clear(context)
                         isStaff = false
                         currentUserEmail = null
+                        scope.launch { ChatDatabase.get(context).messageDao().deleteAll() }
                     }
                     token = newToken
                 }

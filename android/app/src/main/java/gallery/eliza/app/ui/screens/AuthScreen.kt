@@ -319,7 +319,12 @@ fun ConsentDialog(
                                                 }
                                             }
                                             window.addEventListener('scroll', function() { check(); });
-                                            check();
+                                            // Deferred check: only fires if the page is too short to scroll
+                                            setTimeout(function() {
+                                                if (document.body.scrollHeight <= window.innerHeight + 50) {
+                                                    AndroidScroll.onBottom();
+                                                }
+                                            }, 800);
                                         })();
                                     """.trimIndent(), null)
                                 }

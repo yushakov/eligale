@@ -30,6 +30,9 @@ interface ChatMessageDao {
 
     @Query("UPDATE chat_messages SET is_read = 1 WHERE chat_user_id = :chatUserId AND id <= :upToId AND is_staff = 1")
     suspend fun markReadUpTo(chatUserId: Int, upToId: Int)
+
+    @Query("DELETE FROM chat_messages")
+    suspend fun deleteAll()
 }
 
 @Database(entities = [ChatMessageEntity::class], version = 2, exportSchema = false)
