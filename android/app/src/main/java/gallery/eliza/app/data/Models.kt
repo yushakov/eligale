@@ -91,6 +91,17 @@ data class MyComment(
     val created_at: String,
 )
 
+data class CommentReport(
+    val id: Int,
+    val comment_id: Int,
+    val comment_text: String,
+    val comment_author: String,
+    val reporter_email: String,
+    val text: String,
+    val is_read: Boolean,
+    val created_at: String,
+)
+
 data class SearchResult(
     val type: String,           // "comment" or "message"
     val id: Int,

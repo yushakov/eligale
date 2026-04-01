@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
-from .models import Category, Product, ProductImage, Comment, FavoriteImage
+from .models import Category, Product, ProductImage, Comment, FavoriteImage, CommentReport
 
 User = get_user_model()
 
@@ -883,3 +883,210 @@ class FavoriteAPITest(TestCase):
         item = r.json()[0]
         for field in ['image_id', 'product_id', 'product_name', 'image_url', 'image_url_100', 'created_at']:
             self.assertIn(field, item)
+
+
+# ── CommentReport tests ───────────────────────────────────────────────────────
+
+class CommentReportTestBase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.author = User.objects.create(email='author@test.com')
+        self.reporter = User.objects.create(email='reporter@test.com')
+        self.staff = User.objects.create(email='staff@test.com', is_staff=True)
+        self.author_token = Token.objects.create(user=self.author)
+        self.reporter_token = Token.objects.create(user=self.reporter)
+        self.staff_token = Token.objects.create(user=self.staff)
+        self.product = Product.objects.create(name='Ваза')
+        self.comment = Comment.objects.create(product=self.product, user=self.author, text='Отличная вещь')
+        self.reporter_auth = {'HTTP_AUTHORIZATION': f'Token {self.reporter_token.key}'}
+        self.staff_auth = {'HTTP_AUTHORIZATION': f'Token {self.staff_token.key}'}
+        self.author_auth = {'HTTP_AUTHORIZATION': f'Token {self.author_token.key}'}
+
+    def _report(self, comment_id, text='Спам', auth=None):
+        return self.client.post(
+            f'/api/comments/{comment_id}/report/',
+            json.dumps({'text': text}),
+            content_type='application/json',
+            **(auth or self.reporter_auth),
+        )
+
+
+class ReportCommentTest(CommentReportTestBase):
+    def test_creates_report(self):
+        self._report(self.comment.id)
+        self.assertEqual(CommentReport.objects.count(), 1)
+
+    def test_returns_201(self):
+        r = self._report(self.comment.id)
+        self.assertEqual(r.status_code, 201)
+
+    def test_requires_auth(self):
+        r = self.client.post(f'/api/comments/{self.comment.id}/report/',
+                             json.dumps({'text': 'Спам'}), content_type='application/json')
+        self.assertEqual(r.status_code, 401)
+
+    def test_staff_cannot_report(self):
+        r = self._report(self.comment.id, auth=self.staff_auth)
+        self.assertEqual(r.status_code, 403)
+
+    def test_cannot_report_own_comment(self):
+        r = self._report(self.comment.id, auth=self.author_auth)
+        self.assertEqual(r.status_code, 400)
+
+    def test_duplicate_report_returns_400(self):
+        self._report(self.comment.id)
+        r = self._report(self.comment.id)
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(CommentReport.objects.count(), 1)
+
+    def test_empty_text_returns_400(self):
+        r = self._report(self.comment.id, text='')
+        self.assertEqual(r.status_code, 400)
+
+    def test_404_for_missing_comment(self):
+        r = self._report(99999)
+        self.assertEqual(r.status_code, 404)
+
+    def test_text_truncated_to_150(self):
+        long_text = 'а' * 200
+        self._report(self.comment.id, text=long_text)
+        report = CommentReport.objects.get()
+        self.assertEqual(len(report.text), 150)
+
+
+class DeleteOwnCommentTest(CommentReportTestBase):
+    def test_deletes_own_comment(self):
+        r = self.client.delete(f'/api/comments/{self.comment.id}/delete/', **self.author_auth)
+        self.assertEqual(r.status_code, 204)
+        self.assertFalse(Comment.objects.filter(pk=self.comment.id).exists())
+
+    def test_cannot_delete_others_comment(self):
+        r = self.client.delete(f'/api/comments/{self.comment.id}/delete/', **self.reporter_auth)
+        self.assertEqual(r.status_code, 403)
+        self.assertTrue(Comment.objects.filter(pk=self.comment.id).exists())
+
+    def test_requires_auth(self):
+        r = self.client.delete(f'/api/comments/{self.comment.id}/delete/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_404_for_missing_comment(self):
+        r = self.client.delete('/api/comments/99999/delete/', **self.author_auth)
+        self.assertEqual(r.status_code, 404)
+
+    def test_cascades_report_deletion(self):
+        CommentReport.objects.create(comment=self.comment, reporter=self.reporter, text='Спам')
+        self.client.delete(f'/api/comments/{self.comment.id}/delete/', **self.author_auth)
+        self.assertEqual(CommentReport.objects.count(), 0)
+
+
+class StaffReportListTest(CommentReportTestBase):
+    def setUp(self):
+        super().setUp()
+        self.report = CommentReport.objects.create(
+            comment=self.comment, reporter=self.reporter, text='Грубость', is_read=False
+        )
+
+    def test_returns_reports(self):
+        r = self.client.get('/api/staff/reports/', **self.staff_auth)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.json()), 1)
+
+    def test_requires_staff(self):
+        r = self.client.get('/api/staff/reports/', **self.reporter_auth)
+        self.assertEqual(r.status_code, 403)
+
+    def test_requires_auth(self):
+        r = self.client.get('/api/staff/reports/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_marks_as_read_after_fetch(self):
+        self.client.get('/api/staff/reports/', **self.staff_auth)
+        self.report.refresh_from_db()
+        self.assertTrue(self.report.is_read)
+
+    def test_returns_is_read_false_before_marking(self):
+        r = self.client.get('/api/staff/reports/', **self.staff_auth)
+        self.assertFalse(r.json()[0]['is_read'])
+
+    def test_response_has_expected_fields(self):
+        r = self.client.get('/api/staff/reports/', **self.staff_auth)
+        item = r.json()[0]
+        for field in ['id', 'comment_id', 'comment_text', 'comment_author', 'reporter_email', 'text', 'is_read', 'created_at']:
+            self.assertIn(field, item)
+
+
+class StaffReportUnreadTest(CommentReportTestBase):
+    def test_returns_zero_when_none(self):
+        r = self.client.get('/api/staff/reports/unread/', **self.staff_auth)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['unread'], 0)
+
+    def test_counts_unread(self):
+        CommentReport.objects.create(comment=self.comment, reporter=self.reporter, text='Спам')
+        r = self.client.get('/api/staff/reports/unread/', **self.staff_auth)
+        self.assertEqual(r.json()['unread'], 1)
+
+    def test_excludes_read(self):
+        CommentReport.objects.create(comment=self.comment, reporter=self.reporter, text='Спам', is_read=True)
+        r = self.client.get('/api/staff/reports/unread/', **self.staff_auth)
+        self.assertEqual(r.json()['unread'], 0)
+
+    def test_requires_staff(self):
+        r = self.client.get('/api/staff/reports/unread/', **self.reporter_auth)
+        self.assertEqual(r.status_code, 403)
+
+
+class StaffReportDismissTest(CommentReportTestBase):
+    def setUp(self):
+        super().setUp()
+        self.report = CommentReport.objects.create(
+            comment=self.comment, reporter=self.reporter, text='Спам'
+        )
+
+    def test_deletes_report(self):
+        self.client.post(f'/api/staff/reports/{self.report.id}/dismiss/', **self.staff_auth)
+        self.assertFalse(CommentReport.objects.filter(pk=self.report.id).exists())
+
+    def test_keeps_comment(self):
+        self.client.post(f'/api/staff/reports/{self.report.id}/dismiss/', **self.staff_auth)
+        self.assertTrue(Comment.objects.filter(pk=self.comment.id).exists())
+
+    def test_returns_ok(self):
+        r = self.client.post(f'/api/staff/reports/{self.report.id}/dismiss/', **self.staff_auth)
+        self.assertEqual(r.status_code, 200)
+
+    def test_requires_staff(self):
+        r = self.client.post(f'/api/staff/reports/{self.report.id}/dismiss/', **self.reporter_auth)
+        self.assertEqual(r.status_code, 403)
+
+    def test_404_for_missing_report(self):
+        r = self.client.post('/api/staff/reports/99999/dismiss/', **self.staff_auth)
+        self.assertEqual(r.status_code, 404)
+
+
+class StaffReportDeleteCommentTest(CommentReportTestBase):
+    def setUp(self):
+        super().setUp()
+        self.report = CommentReport.objects.create(
+            comment=self.comment, reporter=self.reporter, text='Оскорбление'
+        )
+
+    def test_deletes_comment(self):
+        self.client.post(f'/api/staff/reports/{self.report.id}/delete-comment/', **self.staff_auth)
+        self.assertFalse(Comment.objects.filter(pk=self.comment.id).exists())
+
+    def test_deletes_report_via_cascade(self):
+        self.client.post(f'/api/staff/reports/{self.report.id}/delete-comment/', **self.staff_auth)
+        self.assertFalse(CommentReport.objects.filter(pk=self.report.id).exists())
+
+    def test_returns_ok(self):
+        r = self.client.post(f'/api/staff/reports/{self.report.id}/delete-comment/', **self.staff_auth)
+        self.assertEqual(r.status_code, 200)
+
+    def test_requires_staff(self):
+        r = self.client.post(f'/api/staff/reports/{self.report.id}/delete-comment/', **self.reporter_auth)
+        self.assertEqual(r.status_code, 403)
+
+    def test_404_for_missing_report(self):
+        r = self.client.post('/api/staff/reports/99999/delete-comment/', **self.staff_auth)
+        self.assertEqual(r.status_code, 404)

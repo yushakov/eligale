@@ -59,6 +59,21 @@ interface ApiService {
     @POST("api/auth/record-consent/")
     suspend fun recordConsent(@Header("Authorization") token: String)
 
+    // ── Комментарии (пользователь) ────────────────────────────────────────────
+
+    @POST("api/comments/{id}/report/")
+    suspend fun reportComment(
+        @Header("Authorization") token: String,
+        @Path("id") commentId: Int,
+        @Body body: Map<String, String>
+    )
+
+    @DELETE("api/comments/{id}/delete/")
+    suspend fun deleteOwnComment(
+        @Header("Authorization") token: String,
+        @Path("id") commentId: Int
+    )
+
     // ── Staff комментарии ─────────────────────────────────────────────────────
 
     @GET("api/staff/comments/")
@@ -162,6 +177,20 @@ interface ApiService {
         @Path("userId") userId: Int,
         @Body body: Map<String, Int>,
     )
+
+    // ── Staff жалобы ──────────────────────────────────────────────────────────
+
+    @GET("api/staff/reports/")
+    suspend fun getStaffReports(@Header("Authorization") token: String): List<CommentReport>
+
+    @GET("api/staff/reports/unread/")
+    suspend fun getStaffReportsUnread(@Header("Authorization") token: String): UnreadCount
+
+    @POST("api/staff/reports/{id}/dismiss/")
+    suspend fun dismissReport(@Header("Authorization") token: String, @Path("id") reportId: Int)
+
+    @POST("api/staff/reports/{id}/delete-comment/")
+    suspend fun deleteCommentViaReport(@Header("Authorization") token: String, @Path("id") reportId: Int)
 }
 
 object Api {

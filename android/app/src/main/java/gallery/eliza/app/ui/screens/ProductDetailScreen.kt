@@ -60,6 +60,7 @@ fun ProductDetailScreen(
     token: String?,
     onTokenChange: (String?) -> Unit,
     isStaff: Boolean = false,
+    currentUserEmail: String? = null,
     onOpenChat: (userId: Int, userEmail: String) -> Unit = { _, _ -> },
     scrollToCommentId: Int? = null,
     initialImagePage: Int = 0,
@@ -83,6 +84,8 @@ fun ProductDetailScreen(
     var retryKey by remember { mutableStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     var favoriteImageIds by remember { mutableStateOf(DataCache.favoriteImageIds.toSet()) }
+    var reportTargetComment by remember { mutableStateOf<gallery.eliza.app.data.Comment?>(null) }
+    var deleteTargetCommentId by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -160,6 +163,87 @@ fun ProductDetailScreen(
                 showAuth = false
             },
             onDismiss = { showAuth = false }
+        )
+    }
+
+    // Диалог жалобы на комментарий
+    reportTargetComment?.let { comment ->
+        var reportText by remember { mutableStateOf("") }
+        var sending by remember { mutableStateOf(false) }
+        var reportError by remember { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = { reportTargetComment = null },
+            title = { Text("Пожаловаться на комментарий") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "«${comment.text}»",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = reportText,
+                        onValueChange = { if (it.length <= 150) { reportText = it; reportError = null } },
+                        placeholder = { Text("Опишите причину жалобы") },
+                        supportingText = { Text("${reportText.length}/150") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 4,
+                    )
+                    reportError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            sending = true
+                            reportError = null
+                            try {
+                                Api.service.reportComment("Token ${token!!}", comment.id, mapOf("text" to reportText))
+                                reportTargetComment = null
+                            } catch (_: Exception) {
+                                reportError = "Ошибка. Попробуйте ещё раз."
+                            } finally {
+                                sending = false
+                            }
+                        }
+                    },
+                    enabled = reportText.isNotBlank() && !sending
+                ) {
+                    if (sending) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Text("Отправить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { reportTargetComment = null }) { Text("Отменить") }
+            }
+        )
+    }
+
+    // Диалог подтверждения удаления своего комментария
+    deleteTargetCommentId?.let { commentId ->
+        AlertDialog(
+            onDismissRequest = { deleteTargetCommentId = null },
+            title = { Text("Удалить комментарий?") },
+            text = { Text("Комментарий будет удалён безвозвратно.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                Api.service.deleteOwnComment("Token ${token!!}", commentId)
+                                comments = comments.filter { it.id != commentId }
+                                DataCache.comments[productId] = comments
+                            } catch (_: Exception) { }
+                            deleteTargetCommentId = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Удалить") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTargetCommentId = null }) { Text("Отмена") }
+            }
         )
     }
 
@@ -367,6 +451,23 @@ fun ProductDetailScreen(
                                                     showCommentMenu = false
                                                 }
                                             )
+                                            if (token != null && comment.user_email == currentUserEmail) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Удалить", color = MaterialTheme.colorScheme.error) },
+                                                    onClick = {
+                                                        deleteTargetCommentId = comment.id
+                                                        showCommentMenu = false
+                                                    }
+                                                )
+                                            } else if (token != null && !isStaff) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Пожаловаться") },
+                                                    onClick = {
+                                                        reportTargetComment = comment
+                                                        showCommentMenu = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }

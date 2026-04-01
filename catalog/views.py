@@ -21,7 +21,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import authentication_classes, permission_classes
 
-from .models import Category, Product, ProductImage, Comment, FavoriteImage
+from .models import Category, Product, ProductImage, Comment, FavoriteImage, CommentReport
 from .serializers import CategorySerializer, ProductListSerializer, ProductDetailSerializer, CommentSerializer, StaffCommentSerializer, FavoriteImageSerializer
 
 
@@ -255,6 +255,91 @@ def staff_comment_delete(request, comment_id):
     comment = get_object_or_404(Comment, pk=comment_id)
     comment.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Comment report endpoints ─────────────────────────────────────────────────
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def report_comment(request, comment_id):
+    if request.user.is_staff:
+        return Response({'error': 'Staff cannot report comments'}, status=status.HTTP_403_FORBIDDEN)
+    comment = get_object_or_404(Comment, pk=comment_id)
+    if comment.user == request.user:
+        return Response({'error': 'Cannot report own comment'}, status=status.HTTP_400_BAD_REQUEST)
+    text = request.data.get('text', '').strip()[:150]
+    if not text:
+        return Response({'error': 'text is required'}, status=status.HTTP_400_BAD_REQUEST)
+    _, created = CommentReport.objects.get_or_create(
+        comment=comment, reporter=request.user,
+        defaults={'text': text}
+    )
+    if not created:
+        return Response({'error': 'Already reported'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'ok': True}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_own_comment(request, comment_id):
+    comment = get_object_or_404(Comment, pk=comment_id)
+    if comment.user != request.user:
+        return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    comment.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_report_list(request):
+    reports = (CommentReport.objects
+               .select_related('comment', 'comment__user', 'comment__product', 'reporter')
+               .order_by('-created_at'))
+    data = [
+        {
+            'id': r.id,
+            'comment_id': r.comment.id,
+            'comment_text': r.comment.text,
+            'comment_author': r.comment.user.display_name or r.comment.user.email,
+            'reporter_email': r.reporter.email,
+            'text': r.text,
+            'is_read': r.is_read,
+            'created_at': r.created_at.isoformat(),
+        }
+        for r in reports
+    ]
+    # Помечаем как прочитанные после формирования ответа
+    CommentReport.objects.filter(is_read=False).update(is_read=True)
+    return Response(data)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_report_unread(request):
+    count = CommentReport.objects.filter(is_read=False).count()
+    return Response({'unread': count})
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_report_dismiss(request, report_id):
+    report = get_object_or_404(CommentReport, pk=report_id)
+    report.delete()
+    return Response({'ok': True})
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def staff_report_delete_comment(request, report_id):
+    report = get_object_or_404(CommentReport, pk=report_id)
+    report.comment.delete()  # cascades to report
+    return Response({'ok': True})
 
 
 # ── Mobile views ──────────────────────────────────────────────────────────────

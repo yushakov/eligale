@@ -29,6 +29,7 @@ import gallery.eliza.app.ui.screens.FavoritesScreen
 import gallery.eliza.app.ui.screens.ProductDetailScreen
 import gallery.eliza.app.ui.screens.ProductListScreen
 import gallery.eliza.app.ui.screens.MyCommentsScreen
+import gallery.eliza.app.ui.screens.ReportsScreen
 import gallery.eliza.app.ui.screens.SearchScreen
 import gallery.eliza.app.ui.theme.ElizaGalleryTheme
 import kotlinx.coroutines.launch
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 var token by remember { mutableStateOf(TokenStorage.get(context)) }
                 var isStaff by remember { mutableStateOf(false) }
+                var currentUserEmail by remember { mutableStateOf<String?>(null) }
 
                 val onTokenChange: (String?) -> Unit = { newToken ->
                     if (newToken != null) {
@@ -57,11 +59,13 @@ class MainActivity : ComponentActivity() {
                             try {
                                 val profile = Api.service.getProfile("Token $newToken")
                                 isStaff = profile.is_staff
+                                currentUserEmail = profile.email
                             } catch (_: Exception) { }
                         }
                     } else {
                         TokenStorage.clear(context)
                         isStaff = false
+                        currentUserEmail = null
                     }
                     token = newToken
                 }
@@ -73,6 +77,7 @@ class MainActivity : ComponentActivity() {
                         try {
                             val profile = Api.service.getProfile("Token $savedToken")
                             isStaff = profile.is_staff
+                            currentUserEmail = profile.email
                         } catch (_: Exception) { }
                     }
                 }
@@ -93,6 +98,7 @@ class MainActivity : ComponentActivity() {
                             onMyCommentsClick = { navController.navigate("my_comments") },
                             onSearchClick = { navController.navigate("search") },
                             onFavoritesClick = { navController.navigate("favorites") },
+                            onReportsClick = { navController.navigate("reports") },
                             isStaff = isStaff,
                         )
                     }
@@ -143,6 +149,7 @@ class MainActivity : ComponentActivity() {
                             token = token,
                             onTokenChange = onTokenChange,
                             isStaff = isStaff,
+                            currentUserEmail = currentUserEmail,
                             onOpenChat = { userId, userEmail ->
                                 navController.navigate("chat_staff/$userId?email=$userEmail")
                             },
@@ -235,6 +242,15 @@ class MainActivity : ComponentActivity() {
                             onOpenProduct = { productId, commentId ->
                                 navController.navigate("product/$productId?commentId=$commentId")
                             },
+                            onBack = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
+                            onHome = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
+                        )
+                    }
+                    // Жалобы (staff)
+                    composable("reports") { entry ->
+                        val t = token ?: return@composable
+                        ReportsScreen(
+                            token = t,
                             onBack = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() },
                             onHome = { if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack("categories", false) },
                         )

@@ -76,3 +76,18 @@ class Comment(models.Model):
 
     def __str__(self):
         return f'{self.user.email} → {self.product.name}'
+
+
+class CommentReport(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='reports')
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comment_reports')
+    text = models.CharField(max_length=150)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('comment', 'reporter')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.reporter.email} → comment {self.comment.id}'

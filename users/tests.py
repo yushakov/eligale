@@ -335,3 +335,57 @@ class ProfileIsStaffTest(TestCase):
         self.user.save()
         r = self._get()
         self.assertTrue(r.json()['is_staff'])
+
+
+class VerifyCodeConsentTest(TestCase):
+    """has_consent field in verify-code response."""
+    def setUp(self):
+        self.client = Client()
+
+    def _verify(self, email='u@example.com', code='123456'):
+        EmailVerification.objects.create(email=email, code=code)
+        return self.client.post('/api/auth/verify-code/',
+                                {'email': email, 'code': code},
+                                content_type='application/json')
+
+    def test_has_consent_false_for_new_user(self):
+        r = self._verify()
+        self.assertFalse(r.json()['has_consent'])
+
+    def test_has_consent_true_after_record(self):
+        r = self._verify()
+        token = r.json()['token']
+        self.client.post('/api/auth/record-consent/',
+                         HTTP_AUTHORIZATION=f'Token {token}')
+        EmailVerification.objects.create(email='u@example.com', code='654321')
+        r2 = self.client.post('/api/auth/verify-code/',
+                              {'email': 'u@example.com', 'code': '654321'},
+                              content_type='application/json')
+        self.assertTrue(r2.json()['has_consent'])
+
+
+class RecordConsentTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(email='u@example.com')
+        self.token = Token.objects.create(user=self.user)
+        self.auth = {'HTTP_AUTHORIZATION': f'Token {self.token.key}'}
+
+    def test_records_consent_date(self):
+        self.client.post('/api/auth/record-consent/', **self.auth)
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.privacy_and_terms_of_use_consent_date)
+
+    def test_returns_ok(self):
+        r = self.client.post('/api/auth/record-consent/', **self.auth)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()['ok'])
+
+    def test_requires_auth(self):
+        r = self.client.post('/api/auth/record-consent/')
+        self.assertEqual(r.status_code, 401)
+
+    def test_idempotent(self):
+        self.client.post('/api/auth/record-consent/', **self.auth)
+        r = self.client.post('/api/auth/record-consent/', **self.auth)
+        self.assertEqual(r.status_code, 200)

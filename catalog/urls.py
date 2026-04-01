@@ -14,6 +14,12 @@ urlpatterns = [
     path('api/staff/comments/unread/', views.staff_comment_unread, name='staff_comment_unread'),
     path('api/staff/comments/<int:comment_id>/mark-read/', views.staff_comment_mark_read, name='staff_comment_mark_read'),
     path('api/staff/comments/<int:comment_id>/delete/', views.staff_comment_delete, name='staff_comment_delete'),
+    path('api/comments/<int:comment_id>/report/', views.report_comment, name='report_comment'),
+    path('api/comments/<int:comment_id>/delete/', views.delete_own_comment, name='delete_own_comment'),
+    path('api/staff/reports/', views.staff_report_list, name='staff_report_list'),
+    path('api/staff/reports/unread/', views.staff_report_unread, name='staff_report_unread'),
+    path('api/staff/reports/<int:report_id>/dismiss/', views.staff_report_dismiss, name='staff_report_dismiss'),
+    path('api/staff/reports/<int:report_id>/delete-comment/', views.staff_report_delete_comment, name='staff_report_delete_comment'),
     path('api/favorites/', views.favorites, name='favorites'),
     path('api/favorites/<int:image_id>/', views.favorite_delete, name='favorite_delete'),
 

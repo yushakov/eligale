@@ -48,6 +48,7 @@ fun CategoryScreen(
     onMyCommentsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onFavoritesClick: () -> Unit,
+    onReportsClick: () -> Unit,
     isStaff: Boolean,
 ) {
     var categories by remember { mutableStateOf(DataCache.categories ?: emptyList()) }
@@ -60,6 +61,7 @@ fun CategoryScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     var unreadCount by remember { mutableStateOf(0) }
     var unreadCommentCount by remember { mutableStateOf(0) }
+    var unreadReportCount by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
     // Если кэш есть — сразу скрываем сплэш, не ждём сети
@@ -121,6 +123,17 @@ fun CategoryScreen(
         }
     }
 
+    // Polling непрочитанных жалоб (только для staff)
+    LaunchedEffect(token, isStaff) {
+        if (token == null || !isStaff) { unreadReportCount = 0; return@LaunchedEffect }
+        while (true) {
+            try {
+                unreadReportCount = Api.service.getStaffReportsUnread("Token $token").unread
+            } catch (_: Exception) { }
+            delay(15_000)
+        }
+    }
+
     if (showAuth) {
         AuthDialog(
             onTokenReceived = { newToken ->
@@ -154,7 +167,7 @@ fun CategoryScreen(
             TopAppBar(
                 title = { Text("Eliza Gallery") },
                 actions = {
-                    val hasAnyUnread = unreadCount > 0 || unreadCommentCount > 0
+                    val hasAnyUnread = unreadCount > 0 || unreadCommentCount > 0 || unreadReportCount > 0
                     Box {
                         TextButton(onClick = { showMenu = true }) {
                             Text("Меню")
@@ -177,6 +190,11 @@ fun CategoryScreen(
                                         text = { Text("Комментарии") },
                                         onClick = { showMenu = false; onCommentsClick() },
                                         trailingIcon = if (unreadCommentCount > 0) {{ RedDot() }} else null,
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Жалобы") },
+                                        onClick = { showMenu = false; onReportsClick() },
+                                        trailingIcon = if (unreadReportCount > 0) {{ RedDot() }} else null,
                                     )
                                 } else {
                                     DropdownMenuItem(

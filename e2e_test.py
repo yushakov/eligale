@@ -231,9 +231,30 @@ def test_authenticated_user(base, token, prod_id):
 
     if prod_id:
         test_favorites(base, token, prod_id)
+        test_reports_user(base, token, prod_id)
 
 
 # ── Section: Favorites ────────────────────────────────────────────────────────
+
+def test_reports_user(base, token, prod_id):
+    section("Reports API (пользователь)")
+    auth = {"Authorization": f"Token {token}"}
+
+    # Создаём комментарий от другого пользователя через public API — берём первый существующий
+    r = get(base, f"/api/products/{prod_id}/comments/")
+    if not (r and r.status_code == 200 and r.json()):
+        skip("Нет комментариев для теста жалоб")
+        return
+
+    comment_id = r.json()[0]["id"]
+
+    r = post(base, f"/api/comments/{comment_id}/report/",
+             json={"text": "e2e test report"}, headers=auth)
+    # Может вернуть 201 (создан) или 400 (уже был репорт от этого аккаунта ранее)
+    check(r and r.status_code in (201, 400),
+          f"POST /api/comments/{comment_id}/report/ → {status(r)}",
+          "Report comment failed", f"status={status(r)} body={r.text if r else ''}")
+
 
 def test_favorites(base, token, prod_id):
     section("Favorites API")
@@ -349,6 +370,17 @@ def test_staff(base, staff_token, prod_id):
     r = get(base, "/api/search/?q=тест", headers=auth)
     check(r and r.status_code == 200, "GET /api/search/?q=тест (staff) → 200",
           "Search (staff) failed", f"status={status(r)}")
+
+    r = get(base, "/api/staff/reports/", headers=auth)
+    check(r and r.status_code == 200, "GET /api/staff/reports/ → 200",
+          "Staff reports failed", f"status={status(r)}")
+
+    r = get(base, "/api/staff/reports/unread/", headers=auth)
+    if check(r and r.status_code == 200, "GET /api/staff/reports/unread/ → 200",
+             "Staff reports unread failed", f"status={status(r)}"):
+        check("unread" in r.json(),
+              "Staff reports unread: поле unread есть",
+              "Staff reports unread: поле отсутствует", f"keys={list(r.json().keys())}")
 
     # /api/catalog/upload/presign использует @staff_member_required (сессия) + @csrf_protect,
     # поэтому не тестируется через Token auth — только из браузера (mobile admin).
