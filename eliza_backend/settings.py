@@ -76,7 +76,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'eliza_backend.middleware.RequestLogMiddleware',
 ]
+
+REQUEST_LOG_FILE = BASE_DIR / 'log.txt'
 
 ROOT_URLCONF = 'eliza_backend.urls'
 

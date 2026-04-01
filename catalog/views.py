@@ -622,3 +622,14 @@ def app_download(request):
         'release': release,
         'apk_url': apk_url,
     })
+
+
+@staff_member_required
+def log_view(request):
+    log_file = settings.REQUEST_LOG_FILE
+    lines = []
+    if log_file and os.path.exists(log_file):
+        with open(log_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+    log_text = ''.join(lines[-5000:])
+    return render(request, 'log.html', {'log': log_text})
