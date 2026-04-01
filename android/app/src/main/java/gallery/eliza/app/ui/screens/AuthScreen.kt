@@ -374,32 +374,36 @@ fun ConsentDialog(
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
-                TextButton(
-                    onClick = {
-                        if (!checked) {
-                            error = if (lang == "ru") "Необходимо принять условия" else "Please accept the terms"
-                            return@TextButton
-                        }
-                        scope.launch {
-                            loading = true
-                            error = null
-                            try {
-                                Api.service.recordConsent("Token $token")
-                                onConfirmed()
-                            } catch (e: Exception) {
-                                error = if (lang == "ru") "Ошибка. Попробуйте ещё раз." else "Error. Please try again."
-                            } finally {
-                                loading = false
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) { Text(if (lang == "ru") "Закрыть" else "Close") }
+                    TextButton(
+                        onClick = {
+                            if (!checked) {
+                                error = if (lang == "ru") "Необходимо принять условия" else "Please accept the terms"
+                                return@TextButton
                             }
-                        }
-                    },
-                    enabled = checked && !loading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                ) {
-                    if (loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text(if (lang == "ru") "Подтвердить" else "Confirm")
+                            scope.launch {
+                                loading = true
+                                error = null
+                                try {
+                                    Api.service.recordConsent("Token $token")
+                                    onConfirmed()
+                                } catch (e: Exception) {
+                                    error = if (lang == "ru") "Ошибка. Попробуйте ещё раз." else "Error. Please try again."
+                                } finally {
+                                    loading = false
+                                }
+                            }
+                        },
+                        enabled = checked && !loading,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Text(if (lang == "ru") "Подтвердить" else "Confirm")
+                    }
                 }
             }
         }
