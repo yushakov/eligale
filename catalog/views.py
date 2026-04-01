@@ -631,5 +631,5 @@ def log_view(request):
     if log_file and os.path.exists(log_file):
         with open(log_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
-    log_text = ''.join(lines[-5000:])
+    log_text = ''.join(reversed(lines[-5000:]))
     return render(request, 'log.html', {'log': log_text})
