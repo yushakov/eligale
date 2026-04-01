@@ -249,6 +249,41 @@ fun ProductDetailScreen(
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
+            contentWindowInsets = WindowInsets(0),
+            bottomBar = {
+                if (product != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = commentText,
+                            onValueChange = { commentText = it },
+                            placeholder = { Text("Написать комментарий...") },
+                            modifier = Modifier.weight(1f),
+                            maxLines = 3,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (token == null) {
+                                    showAuth = true
+                                } else {
+                                    sendingComment = true
+                                }
+                            },
+                            enabled = commentText.isNotBlank() && !sendingComment
+                        ) {
+                            Text("Отправить")
+                        }
+                    }
+                }
+            },
             topBar = {
                 TopAppBar(
                     title = { Text(if (categoryName.isNotBlank()) categoryName else (product?.name ?: "")) },
@@ -473,35 +508,6 @@ fun ProductDetailScreen(
                                 }
                             }
 
-                            // Поле ввода комментария
-                            item {
-                                Row(
-                                    Modifier.padding(12.dp).fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    OutlinedTextField(
-                                        value = commentText,
-                                        onValueChange = { commentText = it },
-                                        placeholder = { Text("Написать комментарий...") },
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 3,
-                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Button(
-                                        onClick = {
-                                            if (token == null) {
-                                                showAuth = true
-                                            } else {
-                                                sendingComment = true
-                                            }
-                                        },
-                                        enabled = commentText.isNotBlank() && !sendingComment
-                                    ) {
-                                        Text("Отправить")
-                                    }
-                                }
-                            }
                         }
                         } // PullToRefreshBox
 
@@ -528,6 +534,7 @@ fun ProductDetailScreen(
                         }
                     }
                 }
+
             }
         }
 
