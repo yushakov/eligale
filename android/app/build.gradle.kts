@@ -16,8 +16,8 @@ android {
         applicationId = "gallery.eliza.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -65,7 +65,6 @@ dependencies {
     ksp(libs.room.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
-    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)

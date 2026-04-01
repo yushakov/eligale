@@ -324,7 +324,7 @@ fun ProductDetailScreen(
                         chatDialogPage?.let { page ->
                             AlertDialog(
                                 onDismissRequest = { chatDialogPage = null },
-                                text = { Text("Вас интересует данное наименование?") },
+                                text = { Text("Прикрепить фото к сообщению?") },
                                 confirmButton = {
                                     TextButton(onClick = {
                                         chatDialogPage = null
@@ -342,7 +342,7 @@ fun ProductDetailScreen(
                                     TextButton(onClick = {
                                         chatDialogPage = null
                                         onGoToChat?.invoke()
-                                    }) { Text("Нет, просто в чат") }
+                                    }) { Text("Не прикреплять") }
                                 },
                             )
                         }
@@ -351,7 +351,7 @@ fun ProductDetailScreen(
                         staffChatDialogPage?.let { page ->
                             AlertDialog(
                                 onDismissRequest = { staffChatDialogPage = null },
-                                text = { Text("В чат с этим наименованием?") },
+                                text = { Text("Прикрепить фото к сообщению?") },
                                 confirmButton = {
                                     TextButton(onClick = {
                                         staffChatDialogPage = null
@@ -362,7 +362,7 @@ fun ProductDetailScreen(
                                     TextButton(onClick = {
                                         staffChatDialogPage = null
                                         onGoToChats?.invoke("")
-                                    }) { Text("Нет, просто в чат") }
+                                    }) { Text("Не прикреплять") }
                                 },
                             )
                         }
@@ -745,7 +745,7 @@ fun FullscreenImageViewer(
                     colors = ButtonDefaults.buttonColors(containerColor = BrownDark.copy(alpha = 0.85f)),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 ) {
-                    Text("В чат", color = Color.White, fontSize = 13.sp)
+                    Text("Задать\nвопрос", color = Color.White, fontSize = 13.sp)
                 }
             }
             Button(

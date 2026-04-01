@@ -36,7 +36,7 @@ class FullscreenImageViewerTest {
                 )
             }
         }
-        composeTestRule.onNodeWithText("В чат").assertExists()
+        composeTestRule.onNodeWithText("Задать\nвопрос").assertExists()
     }
 
     @Test
@@ -50,7 +50,7 @@ class FullscreenImageViewerTest {
                 )
             }
         }
-        composeTestRule.onNodeWithText("В чат").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Задать\nвопрос").assertDoesNotExist()
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ class FullscreenImageViewerTest {
                 )
             }
         }
-        composeTestRule.onNodeWithText("В чат").performClick()
+        composeTestRule.onNodeWithText("Задать\nвопрос").performClick()
         assertEquals(0, capturedPage)
     }
 
