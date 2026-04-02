@@ -380,7 +380,7 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                         color = BrownDark
                     )
                     Text(
-                        text = "вещей: ${category.product_count}",
+                        text = "галерей: ${category.product_count}",
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center,
                         color = BrownDark.copy(alpha = 0.6f)
