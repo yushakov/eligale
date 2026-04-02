@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.BuildConfig
 import gallery.eliza.app.data.Api
@@ -331,15 +332,33 @@ private fun CategoryCard(category: Category, onClick: () -> Unit) {
                     .align(Alignment.TopCenter)
             ) {
                 if (category.cover_url != null) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = category.cover_url_600 ?: category.cover_url,
                         contentDescription = category.name,
                         contentScale = ContentScale.Crop,
-                        placeholder = ColorPainter(Color(0xFFE0E0E0)),
-                        error = ColorPainter(Color(0xFFE0E0E0)),
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(CircleShape)
+                            .clip(CircleShape),
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color(0xFFE0E0E0)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color(0xFFE0E0E0)),
+                            )
+                        },
                     )
                     Box(
                         modifier = Modifier
