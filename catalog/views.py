@@ -562,6 +562,18 @@ def mobile2_product_detail(request, pk):
 
 
 @staff_member_required
+def mobile2_category_edit(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if name:
+            category.name = name
+            category.save(update_fields=['name'])
+        return redirect('mobile2_category_detail', pk=pk)
+    return render(request, 'mobile2/category_edit.html', {'category': category})
+
+
+@staff_member_required
 @require_http_methods(['POST'])
 def mobile2_category_delete(request, pk):
     category = get_object_or_404(Category, pk=pk)
