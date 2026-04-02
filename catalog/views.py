@@ -447,7 +447,7 @@ def mobile_product_toggle_category(request, pk, category_id):
 @staff_member_required
 def mobile2_home(request):
     from django.db.models import Count
-    categories = Category.objects.annotate(product_count=Count('products')).order_by('name')
+    categories = Category.objects.annotate(product_count=Count('products')).order_by('order', 'name')
     return render(request, 'mobile2/home.html', {
         'categories': categories,
         'public_base': PUBLIC_BASE,
@@ -460,7 +460,9 @@ def mobile2_category_add(request):
         name = request.POST.get('name', '').strip()
         cover_key = request.POST.get('cover_key', '').strip()
         if name:
-            cat = Category.objects.create(name=name, cover_key=cover_key)
+            from django.db.models import Max
+            max_order = Category.objects.aggregate(Max('order'))['order__max'] or 0
+            cat = Category.objects.create(name=name, cover_key=cover_key, order=max_order + 1)
             return redirect('mobile2_category_detail', pk=cat.pk)
     return render(request, 'mobile2/category_add.html')
 
@@ -633,3 +635,18 @@ def log_view(request):
             lines = f.readlines()
     log_text = ''.join(reversed(lines[-5000:]))
     return render(request, 'log.html', {'log': log_text})
+
+
+@staff_member_required
+def mobile2_category_reorder(request):
+    from django.db.models import Count
+    if request.method == 'POST':
+        ids = request.POST.getlist('order[]')
+        for i, cat_id in enumerate(ids):
+            Category.objects.filter(pk=cat_id).update(order=i)
+        return redirect('mobile2_home')
+    categories = Category.objects.annotate(product_count=Count('products')).order_by('order', 'name')
+    return render(request, 'mobile2/category_order.html', {
+        'categories': categories,
+        'public_base': PUBLIC_BASE,
+    })

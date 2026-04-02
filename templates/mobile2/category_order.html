@@ -1,0 +1,84 @@
+{% extends "mobile/base.html" %}
+{% block title %}Порядок категорий{% endblock %}
+{% block heading %}Порядок категорий{% endblock %}
+
+{% block content %}
+<style>
+  .order-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .order-item {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+  .order-item.sortable-ghost {
+    opacity: 0.4;
+  }
+  .order-item img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+  }
+  .order-item .no-img {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #eee;
+  }
+  .order-item .item-name {
+    padding: 6px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3E2000;
+    text-align: center;
+  }
+</style>
+
+<p style="color:#888;font-size:13px;margin-bottom:12px;">Перетащите карточки чтобы изменить порядок</p>
+
+<form method="post" id="reorder-form">
+  {% csrf_token %}
+  <div class="order-grid" id="sortable">
+    {% for cat in categories %}
+    <div class="order-item" data-id="{{ cat.id }}">
+      {% if cat.cover_key %}
+        <img src="{{ public_base }}/{{ cat.cover_key }}" alt="{{ cat.name }}">
+      {% else %}
+        <div class="no-img"></div>
+      {% endif %}
+      <div class="item-name">{{ cat.name }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div id="hidden-inputs"></div>
+  <button type="submit" class="btn">Сохранить порядок</button>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script>
+  Sortable.create(document.getElementById('sortable'), {
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+  });
+
+  document.getElementById('reorder-form').addEventListener('submit', function() {
+    const container = document.getElementById('hidden-inputs');
+    container.innerHTML = '';
+    document.querySelectorAll('#sortable .order-item').forEach(function(el) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'order[]';
+      input.value = el.dataset.id;
+      container.appendChild(input);
+    });
+  });
+</script>
+{% endblock %}

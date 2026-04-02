@@ -34,6 +34,7 @@ urlpatterns = [
     path('mobile/products/<int:pk>/images/add/', views.mobile_product_image_add, name='mobile_product_image_add'),
     # Mobile2
     path('mobile2/', views.mobile2_home, name='mobile2_home'),
+    path('mobile2/categories/reorder/', views.mobile2_category_reorder, name='mobile2_category_reorder'),
     path('mobile2/categories/add/', views.mobile2_category_add, name='mobile2_category_add'),
     path('mobile2/categories/<int:pk>/', views.mobile2_category_detail, name='mobile2_category_detail'),
     path('mobile2/categories/<int:category_id>/products/add/', views.mobile2_product_add, name='mobile2_product_add'),

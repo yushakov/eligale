@@ -6,12 +6,13 @@ class Category(models.Model):
     name = models.CharField(max_length=255)
     cover_key = models.CharField(max_length=1024, blank=True, default='')
     is_hidden = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'Category'
         verbose_name_plural = 'Categories'
-        ordering = ['name']
+        ordering = ['order', 'name']
 
     def __str__(self):
         return self.name
