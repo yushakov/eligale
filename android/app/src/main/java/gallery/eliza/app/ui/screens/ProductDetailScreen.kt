@@ -39,6 +39,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
@@ -682,7 +685,7 @@ fun FullscreenImageViewer(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = images[page].image_url,
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
@@ -712,6 +715,11 @@ fun FullscreenImageViewer(
                                 } while (event.changes.any { it.pressed })
                             }
                         },
+                    loading = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color.White)
+                        }
+                    },
                 )
             }
         }
