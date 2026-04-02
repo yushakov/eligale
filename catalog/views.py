@@ -691,13 +691,15 @@ def latest_app_version(request):
 
 
 def app_download(request):
-    release = AppRelease.objects.order_by('-version_code').first()
+    releases = list(AppRelease.objects.order_by('-version_code'))
+    latest = releases[0] if releases else None
     apk_url = ''
-    if release and release.apk_key:
+    if latest and latest.apk_key:
         base = settings.YA_PUBLIC_UPLOADER_PUBLIC_BASE_URL.rstrip('/')
-        apk_url = f'{base}/{release.apk_key}'
+        apk_url = f'{base}/{latest.apk_key}'
     return render(request, 'app_download.html', {
-        'release': release,
+        'latest': latest,
+        'releases': releases,
         'apk_url': apk_url,
     })
 

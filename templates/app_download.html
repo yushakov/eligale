@@ -14,7 +14,6 @@
       background: #fff;
     }
     h1 { font-size: 24px; margin-bottom: 4px; }
-    .version { color: #888; font-size: 14px; margin-bottom: 32px; }
     .download-btn {
       display: inline-block;
       background: #3E2000;
@@ -27,33 +26,49 @@
       margin-bottom: 40px;
     }
     .download-btn:hover { background: #5a3000; }
-    h2 { font-size: 16px; margin-bottom: 12px; border-top: 1px solid #eee; padding-top: 24px; }
-    pre {
+    .no-release { color: #888; }
+    .release-entry { border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
+    .release-entry:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+    .release-version { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .release-notes {
       white-space: pre-wrap;
       font-family: inherit;
       font-size: 15px;
       line-height: 1.6;
       margin: 0;
+      color: #555;
     }
-    .no-release { color: #888; }
+    .no-notes { color: #aaa; font-size: 14px; }
   </style>
 </head>
 <body>
   <p style="margin-bottom:16px;"><a href="https://eliza.gallery" style="color:#3E2000;font-size:14px;text-decoration:none;">← eliza.gallery</a></p>
   <h1>Eliza Gallery</h1>
-  {% if release %}
-    <div class="version">Версия {{ release.version_name }} (code {{ release.version_code }})</div>
+
+  {% if latest %}
     {% if apk_url %}
+      <p style="color:#888;font-size:14px;margin-bottom:16px;">Актуальная версия: {{ latest.version_name }}</p>
       <a class="download-btn" href="{{ apk_url }}" download>Скачать APK</a>
     {% else %}
-      <p class="no-release">Файл APK ещё не загружен.</p>
-    {% endif %}
-    {% if release.release_notes %}
-      <h2>Что нового</h2>
-      <pre>{{ release.release_notes }}</pre>
+      <p class="no-release" style="margin-bottom:32px;">Файл APK ещё не загружен.</p>
     {% endif %}
   {% else %}
     <p class="no-release">Релизов пока нет.</p>
+  {% endif %}
+
+  {% if releases %}
+    <div>
+      {% for r in releases %}
+      <div class="release-entry">
+        <div class="release-version">Версия {{ r.version_name }}</div>
+        {% if r.release_notes %}
+          <pre class="release-notes">{{ r.release_notes }}</pre>
+        {% else %}
+          <span class="no-notes">Без описания</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
   {% endif %}
 </body>
 </html>
