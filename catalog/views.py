@@ -1,6 +1,8 @@
 import json
 import mimetypes
 import os
+import random
+import string
 import uuid
 from datetime import datetime
 
@@ -121,6 +123,25 @@ def _get_s3_client():
         region_name=settings.YA_PUBLIC_UPLOADER_REGION_NAME,
         config=Config(signature_version='s3v4'),
     )
+
+
+def _delete_s3_image_and_thumbnails(key: str) -> None:
+    """Delete original + all thumbnail variants from the public bucket."""
+    if not key:
+        return
+    from .thumbnails import THUMBNAIL_SIZES, thumbnail_key as _thumb_key
+    s3 = _get_s3_client()
+    bucket = settings.YA_PUBLIC_UPLOADER_BUCKET_NAME
+    keys_to_delete = [key] + [_thumb_key(key, size) for size in THUMBNAIL_SIZES]
+    objects = [{'Key': k} for k in keys_to_delete]
+    try:
+        s3.delete_objects(Bucket=bucket, Delete={'Objects': objects, 'Quiet': True})
+    except Exception:
+        pass
+
+
+def _random_product_name() -> str:
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
 def _build_object_key(filename: str, prefix: str = 'catalog') -> str:
@@ -424,8 +445,8 @@ def mobile_product_image_add(request, pk):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     if not image_key:
         return JsonResponse({'error': 'image_key required'}, status=400)
-    ProductImage.objects.create(product=product, image_key=image_key)
-    return JsonResponse({'ok': True})
+    img = ProductImage.objects.create(product=product, image_key=image_key)
+    return JsonResponse({'ok': True, 'id': img.id})
 
 
 @staff_member_required
@@ -526,7 +547,7 @@ def mobile2_product_add(request, category_id):
 @staff_member_required
 def mobile2_product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    images = product.images.all().order_by('id')
+    images = list(product.images.all().order_by('order', 'created_at', 'id'))
     all_categories = Category.objects.all().order_by('name')
     product_category_ids = set(product.categories.values_list('id', flat=True))
     back_category = product.categories.order_by('id').first()
@@ -557,6 +578,61 @@ def mobile2_product_delete(request, pk):
     if category_id:
         return redirect('mobile2_category_detail', pk=category_id)
     return redirect('mobile2_home')
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def mobile2_product_images_action(request, pk):
+    """Bulk action on selected ProductImages: hide, show, delete, move."""
+    product = get_object_or_404(Product, pk=pk)
+    action = request.POST.get('action')
+    ids = [int(i) for i in request.POST.getlist('ids[]') if i.isdigit()]
+    if not ids or action not in ('hide', 'show', 'delete', 'move'):
+        return redirect('mobile2_product_detail', pk=pk)
+
+    images = list(ProductImage.objects.filter(id__in=ids, product=product))
+    if not images:
+        return redirect('mobile2_product_detail', pk=pk)
+
+    selected_keys = {img.image_key for img in images}
+
+    def _update_cover(prod, excluded_keys):
+        """If product cover is among excluded_keys, switch to first remaining visible."""
+        if prod.cover_key in excluded_keys:
+            first = prod.images.filter(is_hidden=False).exclude(image_key__in=excluded_keys).first()
+            prod.cover_key = first.image_key if first else ''
+            prod.save(update_fields=['cover_key'])
+
+    if action == 'hide':
+        _update_cover(product, selected_keys)
+        ProductImage.objects.filter(id__in=ids).update(is_hidden=True)
+        return redirect('mobile2_product_detail', pk=pk)
+
+    if action == 'show':
+        ProductImage.objects.filter(id__in=ids).update(is_hidden=False)
+        return redirect('mobile2_product_detail', pk=pk)
+
+    if action == 'delete':
+        _update_cover(product, selected_keys)
+        for key in selected_keys:
+            _delete_s3_image_and_thumbnails(key)
+        ProductImage.objects.filter(id__in=ids).delete()
+        return redirect('mobile2_product_detail', pk=pk)
+
+    if action == 'move':
+        first_image = images[0]
+        new_product = Product.objects.create(
+            name=_random_product_name(),
+            cover_key=first_image.image_key,
+        )
+        # Copy categories from original product
+        for cat in product.categories.all():
+            new_product.categories.add(cat)
+        # Move images to new product
+        ProductImage.objects.filter(id__in=ids).update(product=new_product)
+        # Update cover of original if needed
+        _update_cover(product, selected_keys)
+        return redirect('mobile2_product_detail', pk=new_product.pk)
 
 
 @staff_member_required
