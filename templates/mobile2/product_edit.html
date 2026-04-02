@@ -1,0 +1,19 @@
+{% extends "mobile/base.html" %}
+{% block title %}Редактировать товар{% endblock %}
+{% block heading %}Редактировать{% endblock %}
+{% block back %}<a href="{% url 'mobile2_product_detail' product.id %}">←</a>{% endblock %}
+
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+  <div class="form-group">
+    <label>Название</label>
+    <input type="text" name="name" value="{{ product.name }}" required>
+  </div>
+  <div class="form-group">
+    <label>Описание</label>
+    <textarea name="description">{{ product.description }}</textarea>
+  </div>
+  <button type="submit" class="btn">Сохранить</button>
+</form>
+{% endblock %}

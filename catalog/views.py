@@ -570,6 +570,20 @@ def mobile2_category_delete(request, pk):
 
 
 @staff_member_required
+def mobile2_product_edit(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        if name:
+            product.name = name
+            product.description = description
+            product.save(update_fields=['name', 'description'])
+        return redirect('mobile2_product_detail', pk=pk)
+    return render(request, 'mobile2/product_edit.html', {'product': product})
+
+
+@staff_member_required
 @require_http_methods(['POST'])
 def mobile2_product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)

@@ -2,6 +2,7 @@
 {% block title %}{{ product.name }}{% endblock %}
 {% block heading %}{{ product.name }}{% endblock %}
 {% block back %}<a href="{% if back_category %}{% url 'mobile2_category_detail' back_category.pk %}{% else %}{% url 'mobile2_home' %}{% endif %}">←</a>{% endblock %}
+{% block topbar_extra %}<a href="{% url 'mobile2_product_edit' product.id %}" style="font-size:13px;opacity:0.7;white-space:nowrap;">Edit</a>{% endblock %}
 
 {% block content %}
 <style>
