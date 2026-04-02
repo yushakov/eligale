@@ -19,6 +19,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import gallery.eliza.app.data.Api
 import gallery.eliza.app.data.DataCache
@@ -129,13 +130,31 @@ private fun ProductTile(product: Product, onClick: () -> Unit) {
             .aspectRatio(1f)
             .clickable(onClick = onClick)
     ) {
-        AsyncImage(
+        SubcomposeAsyncImage(
             model = product.cover_url_300 ?: product.cover_url,
             contentDescription = product.name,
             contentScale = ContentScale.Crop,
-            placeholder = ColorPainter(Color(0xFFE0E0E0)),
-            error = ColorPainter(Color(0xFFE0E0E0)),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            loading = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFE0E0E0)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            },
+            error = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFE0E0E0)),
+                )
+            },
         )
         Text(
             text = "${product.image_count} фото",
