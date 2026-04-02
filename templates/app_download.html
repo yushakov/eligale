@@ -60,7 +60,8 @@
     <div>
       {% for r in releases %}
       <div class="release-entry">
-        <div class="release-version">Версия {{ r.version_name }} ({{ r.created_at|date:"d-m-Y, H:i" }})</div>
+        <div class="release-version">Версия {{ r.version_name }}</div>
+        <div style="font-size:13px;color:#aaa;margin-bottom:8px;">{{ r.created_at|date:"d-m-Y, H:i" }}</div>
         {% if r.release_notes %}
           <pre class="release-notes">{{ r.release_notes }}</pre>
         {% else %}
