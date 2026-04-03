@@ -546,8 +546,17 @@ def mobile2_product_add(request, category_id):
 
 @staff_member_required
 def mobile2_product_detail(request, pk):
+    from .thumbnails import thumbnail_key
     product = get_object_or_404(Product, pk=pk)
-    images = list(product.images.all().order_by('order', 'created_at', 'id'))
+    raw_images = list(product.images.all().order_by('order', 'created_at', 'id'))
+    images = [
+        {
+            'id': img.id,
+            'is_hidden': img.is_hidden,
+            'thumb_url': f"{PUBLIC_BASE}/{thumbnail_key(img.image_key, 200)}",
+        }
+        for img in raw_images
+    ]
     all_categories = Category.objects.all().order_by('name')
     product_category_ids = set(product.categories.values_list('id', flat=True))
     back_category = product.categories.order_by('id').first()

@@ -8,6 +8,45 @@
 <style>
 .btn-danger { background: #c0392b; color: white; border: none; border-radius: 10px; padding: 10px 16px; font-size: 15px; cursor: pointer; }
 
+/* Upload spinner overlay */
+.photo-uploading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+}
+.photo-uploading .upload-spinner {
+  display: block;
+}
+.upload-spinner {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border: 3px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+.photo-error img { filter: brightness(0.4); }
+.photo-error::after {
+  content: '✕';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e74c3c;
+  font-size: 28px;
+  font-weight: bold;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* Photo grid */
 .photo-item {
   position: relative;
@@ -167,7 +206,7 @@
             <div class="photo-item{% if img.is_hidden %} hidden-photo{% endif %}"
                  data-id="{{ img.id }}"
                  onclick="toggleSelect(this)">
-              <img src="{{ public_base }}/{{ img.image_key }}" alt="">
+              <img src="{{ img.thumb_url }}" alt="">
               <div class="photo-check">✓</div>
               {% if img.is_hidden %}<div class="hidden-badge">скрыто</div>{% endif %}
             </div>
@@ -290,8 +329,21 @@ async function addImages(input) {
     const grid = document.getElementById('images_grid');
     let done = 0, failed = 0;
 
-    for (const file of files) {
-        status.textContent = `Загружаю ${done + 1} из ${files.length}...`;
+    // 1. Мгновенно показываем все фото из локальной памяти со спиннером
+    const items = files.map(file => {
+        const localUrl = URL.createObjectURL(file);
+        const item = document.createElement('div');
+        item.className = 'photo-item photo-uploading';
+        item.innerHTML = `<img src="${localUrl}" alt=""><div class="upload-spinner"></div><div class="photo-check">✓</div>`;
+        grid.appendChild(item);
+        return { item, localUrl };
+    });
+
+    // 2. Загружаем по одному
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const { item, localUrl } = items[i];
+        status.textContent = `Загружаю ${i + 1} из ${files.length}...`;
         status.style.color = '#666';
         try {
             const fd = new FormData();
@@ -315,15 +367,16 @@ async function addImages(input) {
             });
             if (!saveResp.ok) throw new Error('Save failed');
             const saveData = await saveResp.json();
-            // Add new photo item to grid
-            const item = document.createElement('div');
-            item.className = 'photo-item';
+            // Успех: убираем спиннер, проставляем id
+            item.classList.remove('photo-uploading');
             item.dataset.id = saveData.id || '';
             item.onclick = function() { toggleSelect(this); };
-            item.innerHTML = `<img src="${data.public_url}" alt=""><div class="photo-check">✓</div>`;
-            grid.appendChild(item);
+            URL.revokeObjectURL(localUrl);
             done++;
         } catch(e) {
+            // Ошибка: показываем красный крестик
+            item.classList.remove('photo-uploading');
+            item.classList.add('photo-error');
             failed++;
         }
     }
