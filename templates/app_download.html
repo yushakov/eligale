@@ -56,6 +56,13 @@
     <p class="no-release">Релизов пока нет.</p>
   {% endif %}
 
+  <div style="max-width: 300px; margin: auto;">
+    <video controls style="width: 100%; height: auto;"
+	    poster="https://storage.yandexcloud.net/gallery-media-public/app-video-cover.jpeg">
+        <source src="https://storage.yandexcloud.net/gallery-media-public/eliza-gallery-app-v1.4.mp4">
+    </video>
+  </div>
+
   {% if releases %}
     <div>
       {% for r in releases %}
