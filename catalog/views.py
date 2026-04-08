@@ -731,6 +731,33 @@ def app_download(request):
 
 
 @staff_member_required
+def all_products_view(request):
+    from .thumbnails import thumbnail_key
+    products = (
+        Product.objects
+        .prefetch_related('images', 'categories')
+        .order_by('-created_at')
+    )
+    base = PUBLIC_BASE
+    product_data = []
+    for p in products:
+        images = [
+            {'thumb_url': f"{base}/{thumbnail_key(img.image_key, 200)}"}
+            for img in p.images.filter(is_hidden=False).order_by('order', 'created_at', 'id')
+        ]
+        product_data.append({
+            'id': p.id,
+            'name': p.name,
+            'description': p.description,
+            'is_hidden': p.is_hidden,
+            'categories': list(p.categories.values_list('name', flat=True)),
+            'images': images,
+            'admin_url': f"/admin/catalog/product/{p.id}/change/",
+        })
+    return render(request, 'all_products.html', {'products': product_data})
+
+
+@staff_member_required
 def log_view(request):
     log_file = settings.REQUEST_LOG_FILE
     lines = []

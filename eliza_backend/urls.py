@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from main.views import index, privacy, privacy_ru, termsofuse, termsofuse_ru, consent_ru, consent_en
-from catalog.views import log_view
+from catalog.views import log_view, all_products_view
 
 urlpatterns = [
     path("", include("uploader.urls")),
@@ -33,4 +33,5 @@ urlpatterns = [
     path("", index),
     path('admin/', admin.site.urls),
     path('log', log_view, name='log_view'),
+    path('all-products', all_products_view, name='all_products'),
 ]
