@@ -159,6 +159,13 @@ class MainActivity : ComponentActivity() {
                             scrollToCommentId = commentId,
                             initialImagePage = imageIndex,
                             categoryName = categoryName,
+                            categoryId = categoryId,
+                            onNavigateToProduct = { newProductId ->
+                                if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                    navController.popBackStack()
+                                    navController.navigate("product/$newProductId?categoryId=$categoryId&categoryName=${android.net.Uri.encode(categoryName)}")
+                                }
+                            },
                             onGoToChat = if (token != null && !isStaff) {
                                 { navController.navigate("chat") }
                             } else null,

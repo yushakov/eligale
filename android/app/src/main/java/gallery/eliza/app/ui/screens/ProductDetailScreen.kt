@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +37,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -70,6 +72,8 @@ fun ProductDetailScreen(
     onGoToChat: (() -> Unit)? = null,
     onGoToChats: ((pendingText: String) -> Unit)? = null,
     categoryName: String = "",
+    categoryId: Int = -1,
+    onNavigateToProduct: (productId: Int) -> Unit = {},
     onHome: () -> Unit = {},
 ) {
     var product by remember { mutableStateOf(DataCache.productDetail[productId]) }
@@ -91,6 +95,14 @@ fun ProductDetailScreen(
     var deleteTargetCommentId by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+
+    val categoryProductIds = remember(categoryId) {
+        DataCache.products[categoryId]?.map { it.id } ?: emptyList()
+    }
+    val currentIndex = categoryProductIds.indexOf(productId)
+    val totalCount = categoryProductIds.size
+    var swipeDeltaX by remember { mutableFloatStateOf(0f) }
+    val swipeThresholdPx = with(LocalDensity.current) { 80.dp.toPx() }
 
     val onImageFavoriteToggle: (imageId: Int) -> Unit = { imageId ->
         if (token == null) {
@@ -250,7 +262,27 @@ fun ProductDetailScreen(
         )
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .pointerInput(fullscreenState, categoryProductIds, currentIndex) {
+                if (fullscreenState != null || totalCount <= 1 || currentIndex < 0) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (swipeDeltaX < -swipeThresholdPx) {
+                            val nextIndex = (currentIndex + 1) % totalCount
+                            onNavigateToProduct(categoryProductIds[nextIndex])
+                        } else if (swipeDeltaX > swipeThresholdPx) {
+                            val prevIndex = (currentIndex - 1 + totalCount) % totalCount
+                            onNavigateToProduct(categoryProductIds[prevIndex])
+                        }
+                        swipeDeltaX = 0f
+                    },
+                    onDragCancel = { swipeDeltaX = 0f },
+                    onHorizontalDrag = { _, dragAmount -> swipeDeltaX += dragAmount },
+                )
+            }
+    ) {
         Scaffold(
             contentWindowInsets = WindowInsets(0),
             bottomBar = {
@@ -296,6 +328,14 @@ fun ProductDetailScreen(
                         }
                     },
                     actions = {
+                        if (totalCount > 1 && currentIndex >= 0) {
+                            Text(
+                                text = "${currentIndex + 1} / $totalCount",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(end = 4.dp),
+                            )
+                        }
                         IconButton(onClick = onHome) {
                             Icon(Icons.Filled.Home, contentDescription = "На главную")
                         }
