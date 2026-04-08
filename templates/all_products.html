@@ -112,7 +112,7 @@
     <div class="photo-grid">
       {% for img in p.images %}
       <img src="{{ img.thumb_url }}" loading="lazy" alt=""
-           data-id="{{ img.id }}" data-url600="{{ img.url_600 }}">
+           data-id="{{ img.id }}" data-original="{{ img.original_url }}">
       {% endfor %}
     </div>
     <div class="count">{{ p.images|length }} фото</div>
@@ -153,7 +153,7 @@
       currentImageId = img.dataset.id;
       currentGridImg = img;
       const fsImg = document.getElementById('fullscreen-img');
-      fsImg.src = img.dataset.url600;
+      fsImg.src = img.dataset.original;
       document.getElementById('fullscreen-overlay').classList.remove('hidden');
       document.getElementById('btn-crop').style.display = '';
       document.getElementById('btn-save').style.display = 'none';

@@ -745,7 +745,7 @@ def all_products_view(request):
             {
                 'id': img.id,
                 'thumb_url': f"{base}/{thumbnail_key(img.image_key, 200)}",
-                'url_600': f"{base}/{thumbnail_key(img.image_key, 600)}",
+                'original_url': f"{base}/{img.image_key}",
             }
             for img in p.images.filter(is_hidden=False).order_by('order', 'created_at', 'id')
         ]
