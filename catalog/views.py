@@ -742,7 +742,11 @@ def all_products_view(request):
     product_data = []
     for p in products:
         images = [
-            {'thumb_url': f"{base}/{thumbnail_key(img.image_key, 200)}"}
+            {
+                'id': img.id,
+                'thumb_url': f"{base}/{thumbnail_key(img.image_key, 200)}",
+                'url_600': f"{base}/{thumbnail_key(img.image_key, 600)}",
+            }
             for img in p.images.filter(is_hidden=False).order_by('order', 'created_at', 'id')
         ]
         product_data.append({
@@ -755,6 +759,29 @@ def all_products_view(request):
             'admin_url': f"/admin/catalog/product/{p.id}/change/",
         })
     return render(request, 'all_products.html', {'products': product_data})
+
+
+@staff_member_required
+@require_http_methods(['POST'])
+def crop_image(request, pk):
+    image = get_object_or_404(ProductImage, pk=pk)
+    file = request.FILES.get('image')
+    if not file:
+        return JsonResponse({'error': 'no file'}, status=400)
+
+    s3 = _get_s3_client()
+    bucket = settings.YA_PUBLIC_UPLOADER_BUCKET_NAME
+    s3.put_object(
+        Bucket=bucket,
+        Key=image.image_key,
+        Body=file.read(),
+        ContentType='image/jpeg',
+    )
+
+    from .thumbnails import generate_thumbnails_async
+    generate_thumbnails_async(image.image_key)
+
+    return JsonResponse({'ok': True})
 
 
 @staff_member_required
