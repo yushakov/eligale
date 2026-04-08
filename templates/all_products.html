@@ -225,6 +225,7 @@
 
         if (resp.ok) {
           statusEl.textContent = 'Сохранено!';
+          document.getElementById('btn-save').disabled = false;
           // Cache-bust the thumbnail in the grid
           if (currentGridImg) {
             const base = currentGridImg.src.split('?')[0];
